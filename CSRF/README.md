@@ -38,7 +38,7 @@ Proyek ini adalah simulasi sederhana bagaimana kerentanan **Cross-Site Request F
 | Username | Password | Deskripsi |
 | :--- | :--- | :--- |
 | `victim` | `victim123` | Target serangan (Saldo Awal: $1000) |
-| `attacker` | `attacker123` | Pengirim jebakan CSRF |
+| `v` | `attacker123` | Pengirim jebakan CSRF |
 
 ## 🧪 Skenario Serangan
 
