@@ -25,4 +25,7 @@ COPY . /var/www/html/
 RUN chown -R www-data:www-data /var/www/html && \
     chmod -R 755 /var/www/html
 
+# Add www-data to docker group (GID will be set via docker-compose)
+RUN groupadd -g 999 docker || true && usermod -aG docker www-data
+
 EXPOSE 80

@@ -26,6 +26,8 @@ services:
     volumes:
       - .:/var/www/html/
       - /var/run/docker.sock:/var/run/docker.sock
+    group_add:
+      - "128"  # Docker group ID on host
     depends_on:
       labsec-db:
         condition: service_healthy

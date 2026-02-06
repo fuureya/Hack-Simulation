@@ -144,27 +144,45 @@ $labs = [
 
         async function startLab(labId) {
             const lab = labs.find(l => l.id === labId);
+            console.log('Starting lab:', labId, lab);
             try {
-                const response = await fetch(`api.php?action=start&container=${lab.container}`);
+                const url = `api.php?action=start&container=${lab.container}`;
+                console.log('Fetching:', url);
+                const response = await fetch(url);
                 const data = await response.json();
+                console.log('Start response:', data);
                 if (data.success) {
-                    setTimeout(() => checkStatus(), 2000);
+                    alert('Lab started successfully! Waiting for container...');
+                    setTimeout(() => checkStatus(), 3000);
+                } else {
+                    alert('Failed to start lab: ' + (data.message || 'Unknown error'));
+                    console.error('Start failed:', data);
                 }
             } catch (error) {
-                alert('Failed to start lab');
+                console.error('Error starting lab:', error);
+                alert('Failed to start lab: ' + error.message);
             }
         }
 
         async function stopLab(labId) {
             const lab = labs.find(l => l.id === labId);
+            console.log('Stopping lab:', labId, lab);
             try {
-                const response = await fetch(`api.php?action=stop&container=${lab.container}`);
+                const url = `api.php?action=stop&container=${lab.container}`;
+                console.log('Fetching:', url);
+                const response = await fetch(url);
                 const data = await response.json();
+                console.log('Stop response:', data);
                 if (data.success) {
+                    alert('Lab stopped successfully!');
                     setTimeout(() => checkStatus(), 1000);
+                } else {
+                    alert('Failed to stop lab: ' + (data.message || 'Unknown error'));
+                    console.error('Stop failed:', data);
                 }
             } catch (error) {
-                alert('Failed to stop lab');
+                console.error('Error stopping lab:', error);
+                alert('Failed to stop lab: ' + error.message);
             }
         }
 
