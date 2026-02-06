@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  cinemax-xss:
+    build: .
+    ports:
+      - "8001:80"
+    volumes:
+      - .:/var/www/html/
+    container_name: cinemax-xss-container
+    restart: unless-stopped
