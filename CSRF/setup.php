@@ -1,42 +1,50 @@
 <?php
 require_once 'db.php';
 
-try {
-    // Buat tabel users
-    $db->exec("CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT UNIQUE,
-        password TEXT,
-        balance INTEGER DEFAULT 1000,
-        role TEXT
-    )");
+// Drop existing tables
+$db->exec("DROP TABLE IF EXISTS transactions");
+$db->exec("DROP TABLE IF EXISTS users");
 
-    // Buat tabel transactions
-    $db->exec("CREATE TABLE IF NOT EXISTS transactions (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        sender_id INTEGER,
-        receiver_id INTEGER,
-        amount INTEGER,
-        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-    )");
+// Tabel Users v2
+$db->exec("CREATE TABLE users (
+    id INTEGER PRIMARY KEY,
+    username TEXT UNIQUE,
+    password TEXT,
+    acc_number TEXT UNIQUE,
+    pin TEXT,
+    balance DECIMAL(15,2),
+    role TEXT
+)");
 
-    // Cek jika user sudah ada
-    $stmt = $db->query("SELECT COUNT(*) FROM users");
-    if ($stmt->fetchColumn() == 0) {
-        // Seeding data awal
-        // Password di sini tidak di-hash untuk mempermudah simulasi, namun disarankan di-hash untuk aplikasi nyata
-        // Namun karena ini simulasi hacker, kita biarkan simpel.
-        $stmt = $db->prepare("INSERT INTO users (username, password, balance, role) VALUES (?, ?, ?, ?)");
-        
-        $stmt->execute(['victim', 'victim123', 1000, 'victim']);
-        $stmt->execute(['attacker', 'attacker123', 50, 'attacker']);
-        
-        echo "Database berhasil di-setup dengan user 'victim' dan 'attacker'.<br>";
-    } else {
-        echo "Database sudah di-setup.<br>";
-    }
+// Tabel Transactions v2
+$db->exec("CREATE TABLE transactions (
+    id INTEGER PRIMARY KEY,
+    sender_account TEXT,
+    receiver_account TEXT,
+    amount DECIMAL(15,2),
+    description TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+)");
 
-} catch (PDOException $e) {
-    die("Setup gagal: " . $e->getMessage());
+// Seeding Data
+$users = [
+    ['victim', 'victim123', '1234567890', '123456', 10000000, 'victim'],
+    ['attacker', 'attacker123', '0987654321', '654321', 500000, 'attacker'],
+    ['budi', 'budi123', '1122334455', '111111', 2500000, 'user'],
+    ['siti', 'siti123', '5544332211', '222222', 1750000, 'user'],
+    ['ani', 'ani123', '9988776655', '333333', 3000000, 'user']
+];
+
+$stmt = $db->prepare("INSERT INTO users (username, password, acc_number, pin, balance, role) VALUES (?, ?, ?, ?, ?, ?)");
+foreach ($users as $u) {
+    $stmt->execute($u);
 }
+
+// Dummy Transactions
+$db->exec("INSERT INTO transactions (sender_account, receiver_account, amount, description) VALUES 
+('1234567890', '1122334455', 50000, 'Bayar Bakso'),
+('5544332211', '1234567890', 200000, 'Gantian Makan'),
+('1122334455', '1234567890', 150000, 'Patungan Kado')");
+
+echo "NeoBank v2 Setup Complete! Nomor Rekening Victim: 1234567890 | PIN: 123456";
 ?>

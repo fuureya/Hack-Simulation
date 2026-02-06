@@ -35,25 +35,25 @@ Proyek ini adalah simulasi sederhana bagaimana kerentanan **Cross-Site Request F
 
 
 ## 👥 Akun untuk Simulasi
-| Username | Password | Deskripsi |
-| :--- | :--- | :--- |
-| `victim` | `victim123` | Target serangan (Saldo Awal: $1000) |
-| `v` | `attacker123` | Pengirim jebakan CSRF |
+| Username | Password | Nomor Rekening | PIN | Deskripsi |
+| :--- | :--- | :--- | :--- | :--- |
+| `victim` | `victim123` | `1234567890` | `123456` | Target serangan (Saldo Besar) |
+| `attacker` | `attacker123` | `0987654321` | `654321` | Penerima dana curian |
+| `budi`, `siti` | `...` | `...` | `...` | User lain (Kontak Transfer) |
 
 ## 🧪 Skenario Serangan
 
-### Skenario 1: Transfer Saldo Otomatis
-1. Buka browser dan login sebagai `victim` di `http://localhost:8000`.
-2. Buka tab baru di browser yang sama dan akses halaman jebakan: `http://localhost:8000/attacker/transfer.html`.
-3. Tunggu 2 detik hingga form dikirim secara otomatis.
-4. Kembali ke halaman dashboard `victim` dan **refresh**. Anda akan melihat saldo berkurang tanpa adanya konfirmasi dari Anda!
+### Skenario 1: Transfer Saldo Otomatis (Bypass PIN)
+1.  **Login sebagai Victim**: Buka `http://localhost:8000` dan login dengan akun victim.
+2.  **Pancing Korban**: Penyerang membuat halaman jebakan `attacker/transfer.html` yang berisi form tersembunyi dengan parameter `bypass_pin=1`.
+3.  **Eksekusi**: Saat Victim membuka halaman tersebut, browser akan otomatis mengirim POST ke `transfer.php`.
+4.  **Hasil**: Cek dashboard Victim, saldo akan berkurang Rp 5.000.000 tanpa Victim memasukkan PIN!
 
 ### Skenario 2: Privilege Escalation (Account Takeover)
-1. Pastikan Anda masih login sebagai `victim`.
-2. Akses halaman jebakan kedua: `http://localhost:8000/attacker/profile.html`.
-3. Tunggu hingga proses selesai.
-4. Coba logout dan login kembali sebagai `victim` menggunakan password lama (`victim123`). Anda akan gagal!
-5. Gunakan password baru yang disisipkan attacker: `hacked123`. Anda berhasil login! Ini adalah simulasi pengambilalihan akun.
+*(Masih tersedia, memicu perubahan password tanpa token).*
+1. Pastikan masih login sebagai `victim`.
+2. Akses halaman jebakan: `http://localhost:8000/attacker/profile.html`.
+3. Akun victim akan terambil alih dengan password baru dari attacker.
 
 ## 🛡️ Bagaimana Cara Mencegahnya?
 Untuk memperbaiki kerentanan ini, Anda harus mengimplementasikan:
