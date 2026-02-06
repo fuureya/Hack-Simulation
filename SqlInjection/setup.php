@@ -53,35 +53,60 @@ mysqli_query($conn, "CREATE TABLE IF NOT EXISTS billing (
 $res = mysqli_query($conn, "SELECT COUNT(*) as count FROM users");
 $row = mysqli_fetch_assoc($res);
 
-if ($row['count'] == 0) {
-    // Seeding Users
-    mysqli_query($conn, "INSERT INTO users (username, password, role, email) VALUES 
-    ('admin_hms', 'P@ssw0rdAdmin2026', 'admin', 'admin@hospital.com'),
-    ('dr_smith', 'smith123', 'doctor', 'smith@hospital.com'),
-    ('staff_nina', 'nina789', 'staff', 'nina@hospital.com')");
+if ($row['count'] <= 3) { // Jika hanya ada data awal atau kosong
+    // --- SEEDING USERS (50 Data) ---
+    $roles = ['admin', 'doctor', 'staff', 'nurse'];
+    for ($i = 1; $i <= 50; $i++) {
+        $u = "user" . $i;
+        $p = "pass" . $i;
+        $r = $roles[array_rand($roles)];
+        $e = "$u@hospital.com";
+        mysqli_query($conn, "INSERT INTO users (username, password, role, email) VALUES ('$u', '$p', '$r', '$e')");
+    }
 
-    // Seeding Patients
-    mysqli_query($conn, "INSERT INTO patients (name, nik, birthdate, address) VALUES 
-    ('Budi Santoso', '3201010101010001', '1985-05-15', 'Jl. Merdeka No. 10, Jakarta'),
-    ('Siti Aminah', '3201010101010002', '1992-11-20', 'Jl. Mawar No. 5, Bandung')");
+    // --- SEEDING DOCTORS (50 Data) ---
+    $specs = ['Bedah Umum', 'Jantung', 'Anak', 'Saraf', 'Mata', 'Kulit', 'Gigi', 'Dalam'];
+    $names = ['Dr. Andi', 'Dr. Budi', 'Dr. Citra', 'Dr. Dewi', 'Dr. Eko', 'Dr. Fani', 'Dr. Gani', 'Dr. Hana'];
+    for ($i = 1; $i <= 50; $i++) {
+        $n = $names[array_rand($names)] . " " . $i;
+        $s = $specs[array_rand($specs)];
+        $sch = "Senin - Jumat (08:00 - 16:00)";
+        mysqli_query($conn, "INSERT INTO doctors (id, name, specialist, schedule) VALUES ($i, '$n', '$s', '$sch')");
+    }
 
-    // Seeding Doctors
-    mysqli_query($conn, "INSERT INTO doctors (id, name, specialist, schedule) VALUES 
-    (1, 'Dr. Sarah Connor', 'Bedah Umum', 'Senin - Rabu (09:00 - 15:00)'),
-    (2, 'Dr. John Doe', 'Jantung', 'Kamis - Jumat (10:00 - 17:00)')");
+    // --- SEEDING PATIENTS (50 Data) ---
+    $p_names = ['Samsul', 'Rina', 'Joko', 'Maya', 'Tono', 'Lusi', 'Hendra', 'Sari'];
+    for ($i = 1; $i <= 50; $i++) {
+        $n = $p_names[array_rand($p_names)] . " " . $i;
+        $nik = "3201" . str_pad($i, 12, '0', STR_PAD_LEFT);
+        $bd = "19" . rand(70, 99) . "-" . rand(1, 12) . "-" . rand(1, 28);
+        $addr = "Jl. Contoh No. $i, Kota Digital";
+        mysqli_query($conn, "INSERT INTO patients (id, name, nik, birthdate, address) VALUES ($i, '$n', '$nik', '$bd', '$addr')");
+    }
 
-    // Seeding Records
-    mysqli_query($conn, "INSERT INTO medical_records (patient_id, doctor_id, diagnosis, treatment, notes) VALUES 
-    (1, 1, 'Appendicitis Akut', 'Operasi Appendectomy', 'Pasien harus istirahat total selama 1 minggu'),
-    (2, 2, 'Hipertensi Ringan', 'Amlodipine 5mg', 'Kurangi asupan garam dan olahraga teratur')");
+    // --- SEEDING MEDICAL RECORDS (50 Data) ---
+    $diagnoses = ['Flu Burung', 'Typus', 'Maag Akut', 'Patah Tulang', 'Katarak', 'Alergi', 'Migrain'];
+    for ($i = 1; $i <= 50; $i++) {
+        $pid = rand(1, 50);
+        $did = rand(1, 50);
+        $diag = $diagnoses[array_rand($diagnoses)];
+        $treat = "Istirahat dan Obat Rutin";
+        $note = "Pasien perlu kontrol minggu depan.";
+        mysqli_query($conn, "INSERT INTO medical_records (patient_id, doctor_id, diagnosis, treatment, notes) VALUES ($pid, $did, '$diag', '$treat', '$note')");
+    }
 
-    // Seeding Billing
-    mysqli_query($conn, "INSERT INTO billing (patient_id, total, payment_method, card_number) VALUES 
-    (1, 15000000.00, 'Credit Card', '4532-XXXX-XXXX-1122'),
-    (2, 500000.00, 'Debit Card', '6011-XXXX-XXXX-3344')");
+    // --- SEEDING BILLING (50 Data) ---
+    $methods = ['Credit Card', 'Debit Card', 'Cash', 'Insurance'];
+    for ($i = 1; $i <= 50; $i++) {
+        $pid = rand(1, 50);
+        $tot = rand(100000, 5000000);
+        $met = $methods[array_rand($methods)];
+        $card = rand(4000, 6000) . "-XXXX-XXXX-" . rand(1000, 9999);
+        mysqli_query($conn, "INSERT INTO billing (patient_id, total, payment_method, card_number) VALUES ($pid, $tot, '$met', '$card')");
+    }
 
-    echo "Database HMS berhasil di-setup dan diisi data seed.";
+    echo "Database HMS berhasil di-setup dengan 50 data untuk masing-masing tabel.";
 } else {
-    echo "Database sudah ada.";
+    echo "Database sudah terisi data.";
 }
 ?>
