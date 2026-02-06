@@ -1,6 +1,10 @@
 <?php
 require_once 'db.php';
 
+// Create database if not exists
+mysqli_query($conn, "CREATE DATABASE IF NOT EXISTS neohms_sqli");
+mysqli_select_db($conn, "neohms_sqli");
+
 // Tabel Users
 mysqli_query($conn, "CREATE TABLE IF NOT EXISTS users (
     id INT AUTO_INCREMENT PRIMARY KEY,

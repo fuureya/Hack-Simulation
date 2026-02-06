@@ -1,6 +1,10 @@
 <?php
 require_once 'db.php';
 
+// Create database if not exists
+$db->exec("CREATE DATABASE IF NOT EXISTS neobank_csrf");
+$db->exec("USE neobank_csrf");
+
 // Drop existing tables
 $db->exec("DROP TABLE IF EXISTS transactions");
 $db->exec("DROP TABLE IF EXISTS users");

@@ -1,13 +1,12 @@
 <?php
-$host = 'hms-db';
-$user = 'hms_user';
-$pass = 'hms_pass';
-$db   = 'hospital_db';
+$host = 'labsec-db';
+$dbname = 'neohms_sqli';
+$user = 'root';
+$pass = 'labsec_root_2026';
 
-// Koneksi sengaja menggunakan mysqli procedural untuk kemudahan simulasi error
-$conn = mysqli_connect($host, $user, $pass, $db);
+$conn = mysqli_connect($host, $user, $pass, $dbname);
 
 if (!$conn) {
-    die("Koneksi gagal: " . mysqli_connect_error());
+    die("Connection failed: " . mysqli_connect_error());
 }
 ?>

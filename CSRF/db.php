@@ -1,8 +1,8 @@
 <?php
-$host = getenv('DB_HOST') ?: 'neobank-db';
-$dbname = getenv('DB_NAME') ?: 'neobank';
-$user = getenv('DB_USER') ?: 'neobank_user';
-$pass = getenv('DB_PASS') ?: 'neobank_pass';
+$host = 'labsec-db';
+$dbname = 'neobank_csrf';
+$user = 'root';
+$pass = 'labsec_root_2026';
 
 try {
     $db = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $user, $pass);

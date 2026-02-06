@@ -3,7 +3,7 @@
 
 echo "Waiting for MariaDB to be ready..."
 
-until nc -z neobank-db 3306; do
+until nc -z labsec-db 3306; do
   echo "MariaDB is unavailable - sleeping"
   sleep 2
 done
