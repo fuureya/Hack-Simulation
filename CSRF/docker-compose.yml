@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  neobank-csrf:
+    build: .
+    ports:
+      - "8000:80"
+    volumes:
+      - .:/var/www/html/
+    container_name: neobank-csrf-container
+    restart: unless-stopped
