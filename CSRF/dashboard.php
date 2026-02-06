@@ -60,7 +60,7 @@ unset($_SESSION['message'], $_SESSION['error']);
                 </div>
             </div>
             <a href="logout.php" class="bg-white/10 p-3 rounded-2xl backdrop-blur-md border border-white/5">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4-4H3"></path></svg>
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
             </a>
         </div>
     </header>
@@ -180,8 +180,16 @@ unset($_SESSION['message'], $_SESSION['error']);
                 </div>
                 <div>
                     <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">PIN Transaksi</label>
-                    <input type="password" name="pin" required maxlength="6" placeholder="Masukkan 6 digit PIN" 
-                        class="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none tracking-[1em] text-center transition-all">
+                    <div class="relative">
+                        <input type="password" id="pinInput" name="pin" required maxlength="6" placeholder="Masukkan 6 digit PIN" 
+                            class="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 pr-12 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none tracking-[1em] text-center transition-all">
+                        <button type="button" onclick="togglePin()" class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors">
+                            <svg id="eyeIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                            </svg>
+                        </button>
+                    </div>
                 </div>
                 <button type="submit" class="w-full bca-gradient text-white font-bold py-5 rounded-3xl shadow-xl shadow-blue-500/30 active:scale-95 transition-all text-sm">
                     Konfirmasi Transfer
@@ -200,6 +208,19 @@ unset($_SESSION['message'], $_SESSION['error']);
             const modal = document.getElementById(id);
             modal.classList.add('hidden');
             modal.classList.remove('flex');
+        }
+        function togglePin() {
+            const pinInput = document.getElementById('pinInput');
+            const eyeIcon = document.getElementById('eyeIcon');
+            if (pinInput.type === 'password') {
+                pinInput.type = 'text';
+                pinInput.classList.remove('tracking-[1em]');
+                eyeIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path>';
+            } else {
+                pinInput.type = 'password';
+                pinInput.classList.add('tracking-[1em]');
+                eyeIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>';
+            }
         }
     </script>
 </body>

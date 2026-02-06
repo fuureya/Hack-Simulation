@@ -7,24 +7,24 @@ $db->exec("DROP TABLE IF EXISTS users");
 
 // Tabel Users v2
 $db->exec("CREATE TABLE users (
-    id INTEGER PRIMARY KEY,
-    username TEXT UNIQUE,
-    password TEXT,
-    acc_number TEXT UNIQUE,
-    pin TEXT,
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50) UNIQUE,
+    password VARCHAR(255),
+    acc_number VARCHAR(15) UNIQUE,
+    pin VARCHAR(6),
     balance DECIMAL(15,2),
-    role TEXT
-)");
+    role VARCHAR(20)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
 // Tabel Transactions v2
 $db->exec("CREATE TABLE transactions (
-    id INTEGER PRIMARY KEY,
-    sender_account TEXT,
-    receiver_account TEXT,
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    sender_account VARCHAR(15),
+    receiver_account VARCHAR(15),
     amount DECIMAL(15,2),
     description TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-)");
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
 // Seeding Data
 $users = [

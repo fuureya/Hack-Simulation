@@ -60,10 +60,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->execute([$sender['acc_number'], $receiver['acc_number'], $amount, "Transfer ke " . $receiver['username']]);
 
         $db->commit();
-        $_SESSION['message'] = "Transfer Berhasil ke " . $receiver['username'] . " sejumlah Rp" . number_format($amount, 0, ',', '.');
+        $_SESSION['message'] = "Transfer Berhasil ke " . $receiver['username'] . " sejumlah Rp " . number_format($amount, 0, ',', '.');
     } catch (Exception $e) {
         $db->rollBack();
-        $_SESSION['error'] = "Terjadi kesalahan sistem.";
+        $_SESSION['error'] = "Terjadi kesalahan sistem: " . $e->getMessage();
     }
 
     header('Location: dashboard.php');

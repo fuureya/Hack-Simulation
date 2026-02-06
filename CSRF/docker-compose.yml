@@ -1,11 +1,46 @@
-version: '3.8'
-
 services:
+  neobank-db:
+    image: mariadb:10.5
+    container_name: neobank-db
+    environment:
+      MYSQL_ROOT_PASSWORD: root123
+      MYSQL_DATABASE: neobank
+      MYSQL_USER: neobank_user
+      MYSQL_PASSWORD: neobank_pass
+    volumes:
+      - neobank_data:/var/lib/mysql
+    networks:
+      - neobank-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot123"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
   neobank-csrf:
     build: .
+    container_name: neobank-csrf-container
+    command: ["/bin/bash", "/var/www/html/docker-entrypoint.sh"]
     ports:
-      - "8000:80"
+      - "8888:80"
     volumes:
       - .:/var/www/html/
-    container_name: neobank-csrf-container
+    depends_on:
+      neobank-db:
+        condition: service_healthy
+    networks:
+      - neobank-network
+    environment:
+      DB_HOST: neobank-db
+      DB_NAME: neobank
+      DB_USER: neobank_user
+      DB_PASS: neobank_pass
     restart: unless-stopped
+
+networks:
+  neobank-network:
+    driver: bridge
+
+volumes:
+  neobank_data:
