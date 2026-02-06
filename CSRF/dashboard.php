@@ -13,9 +13,15 @@ $stmt->execute([$user_id]);
 $user = $stmt->fetch();
 
 // Ambil transaksi terakhir
-$stmt = $db->prepare("SELECT * FROM transactions WHERE sender_account = ? OR receiver_account = ? ORDER BY created_at DESC LIMIT 5");
-$stmt->execute([$user['acc_number'], $user['acc_number']]);
-$transactions = $stmt->fetchAll();
+try {
+    $stmt = $db->prepare("SELECT * FROM transactions WHERE sender_account = ? OR receiver_account = ? ORDER BY created_at DESC LIMIT 5");
+    $stmt->execute([$user['acc_number'], $user['acc_number']]);
+    $transactions = $stmt->fetchAll();
+} catch (PDOException $e) {
+    // Jika kolom tidak ditemukan, kemungkinan database belum di-setup ulang
+    $_SESSION['error'] = "Database out of sync! Silakan akses <a href='setup.php' class='underline'>setup.php</a> untuk memperbarui skema perbankan v2.";
+    $transactions = [];
+}
 
 // Ambil daftar kontak (user lain)
 $stmt = $db->prepare("SELECT username, acc_number FROM users WHERE id != ?");
