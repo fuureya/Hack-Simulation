@@ -1,1 +1,5 @@
-apalah.baks
+# Sensitive files generated dynamically at runtime
+.env
+*.bak
+*.baks
+docker-entrypoint.sh

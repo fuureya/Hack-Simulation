@@ -13,6 +13,9 @@ RUN docker-php-ext-install pdo pdo_mysql && \
 
 COPY . /var/www/html/
 
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
 RUN chown -R www-data:www-data /var/www/html && \
     chmod -R 755 /var/www/html
 
@@ -20,3 +23,5 @@ RUN chown -R www-data:www-data /var/www/html && \
 # (file .bak, .old, .env dibiarkan publik)
 
 EXPOSE 80
+
+ENTRYPOINT ["docker-entrypoint.sh"]
