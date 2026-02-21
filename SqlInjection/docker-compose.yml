@@ -1,0 +1,15 @@
+services:
+  neohms-sqli:
+    build: .
+    container_name: neohms-sqli-container
+    ports:
+      - "8002:80"
+    volumes:
+      - .:/var/www/html/
+    networks:
+      - labsec-network
+    restart: unless-stopped
+
+networks:
+  labsec-network:
+    external: true

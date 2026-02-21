@@ -1,0 +1,9 @@
+# Audit Log File — AuditTrail System
+# VULN A09: Log file bisa diakses publik via browser!
+# http://localhost:8007/audit.log
+2026-01-15 09:12:34 | INFO | User admin logged in from 192.168.1.50
+2026-01-15 09:15:22 | INFO | Admin transferred $50000 to account 4111111111111111
+2026-01-15 10:02:11 | INFO | Admin changed password for user: bob
+2026-01-15 10:45:33 | INFO | User alice accessed payroll data
+2026-01-15 11:30:00 | INFO | System backup completed: /var/backups/db_backup_20260115.sql
+2026-01-15 14:22:10 | INFO | Admin created new user: superadmin

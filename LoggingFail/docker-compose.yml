@@ -1,0 +1,18 @@
+services:
+  loggingfail-app:
+    build: .
+    container_name: audittrail-loggingfail-container
+    ports:
+      - "8007:80"
+    environment:
+      DB_HOST: labsec-db
+      DB_NAME: audittrail_log
+      DB_USER: root
+      DB_PASS: labsec_root_2026
+    networks:
+      - labsec-network
+    restart: unless-stopped
+
+networks:
+  labsec-network:
+    external: true

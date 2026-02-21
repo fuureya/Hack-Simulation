@@ -1,0 +1,16 @@
+services:
+  neobank-csrf:
+    build: .
+    container_name: neobank-csrf-container
+    command: ["/bin/bash", "/var/www/html/docker-entrypoint.sh"]
+    ports:
+      - "8888:80"
+    volumes:
+      - .:/var/www/html/
+    networks:
+      - labsec-network
+    restart: unless-stopped
+
+networks:
+  labsec-network:
+    external: true

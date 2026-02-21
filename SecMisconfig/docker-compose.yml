@@ -1,0 +1,21 @@
+services:
+  secmisconfig-app:
+    build: .
+    container_name: devops-secmisconfig-container
+    ports:
+      - "8005:80"
+    environment:
+      DB_HOST: labsec-db
+      DB_NAME: devops_misconfig
+      DB_USER: root
+      DB_PASS: labsec_root_2026
+      # VULN A05: Credentials di-hardcode di docker-compose (visible di git)
+      SECRET_KEY: super_secret_key_12345
+      JWT_SECRET: jwt_secret_do_not_share
+    networks:
+      - labsec-network
+    restart: unless-stopped
+
+networks:
+  labsec-network:
+    external: true

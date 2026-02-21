@@ -1,0 +1,18 @@
+services:
+  insecuredesign-app:
+    build: .
+    container_name: quickloan-insecuredesign-container
+    ports:
+      - "8004:80"
+    environment:
+      DB_HOST: labsec-db
+      DB_NAME: quickloan_insecure
+      DB_USER: root
+      DB_PASS: labsec_root_2026
+    networks:
+      - labsec-network
+    restart: unless-stopped
+
+networks:
+  labsec-network:
+    external: true

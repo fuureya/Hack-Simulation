@@ -1,0 +1,13 @@
+services:
+  integrity-relay-app:
+    build: .
+    container_name: integrityfail-objectrelay-container
+    ports:
+      - "8012:80"
+    networks:
+      - labsec-network
+    restart: unless-stopped
+
+networks:
+  labsec-network:
+    external: true

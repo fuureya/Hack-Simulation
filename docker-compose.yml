@@ -1,0 +1,48 @@
+services:
+  labsec-db:
+    image: mariadb:10.5
+    container_name: labsec-mariadb
+    environment:
+      MYSQL_ROOT_PASSWORD: labsec_root_2026
+      MYSQL_DATABASE: labsec_dashboard
+    ports:
+      - "3307:3306"
+    volumes:
+      - labsec_db_data:/var/lib/mysql
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    networks:
+      - labsec-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-plabsec_root_2026"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  labsec-dashboard:
+    build: .
+    container_name: labsec-dashboard
+    ports:
+      - "9000:80"
+    volumes:
+      - .:/var/www/html/
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      labsec-db:
+        condition: service_healthy
+    networks:
+      - labsec-network
+    environment:
+      DB_HOST: labsec-db
+      DB_NAME: labsec_dashboard
+      DB_USER: root
+      DB_PASS: labsec_root_2026
+    restart: unless-stopped
+
+networks:
+  labsec-network:
+    name: labsec-network
+    driver: bridge
+
+volumes:
+  labsec_db_data:

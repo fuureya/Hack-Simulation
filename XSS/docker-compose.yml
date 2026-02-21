@@ -1,0 +1,15 @@
+services:
+  cinemax-xss:
+    build: .
+    container_name: cinemax-xss-container
+    ports:
+      - "8001:80"
+    volumes:
+      - .:/var/www/html/
+    networks:
+      - labsec-network
+    restart: unless-stopped
+
+networks:
+  labsec-network:
+    external: true

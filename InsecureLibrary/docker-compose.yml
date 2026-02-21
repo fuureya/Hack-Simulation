@@ -1,0 +1,18 @@
+services:
+  legacy-cms-app:
+    build: .
+    container_name: insecurelibrary-legacycms-container
+    ports:
+      - "8011:80"
+    environment:
+      DB_HOST: labsec-db
+      DB_NAME: insecure_library
+      DB_USER: root
+      DB_PASS: labsec_root_2026
+    networks:
+      - labsec-network
+    restart: unless-stopped
+
+networks:
+  labsec-network:
+    external: true

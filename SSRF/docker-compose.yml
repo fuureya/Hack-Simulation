@@ -1,0 +1,13 @@
+services:
+  ssrf-app:
+    build: .
+    container_name: webfetcher-ssrf-container
+    ports:
+      - "8008:80"
+    networks:
+      - labsec-network
+    restart: unless-stopped
+
+networks:
+  labsec-network:
+    external: true
