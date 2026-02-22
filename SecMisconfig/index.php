@@ -2,11 +2,11 @@
 session_start();
 
 $error = '';
-// VULN A05: Default credentials tidak diganti (admin:admin)
+// Legacy Bootstrap Credentials (A05: Security Misconfiguration)
 $validCredentials = [
-    'admin' => 'admin',    // VULN: default cred!
-    'devops' => 'devops',   // VULN: default cred!
-    'root' => 'root',     // VULN: default cred!
+    'admin' => 'admin',
+    'devops' => 'devops',
+    'root' => 'root',
 ];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -18,21 +18,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header("Location: portal.php");
         exit;
     } else {
-        // VULN A05: Error message verbose — beri tahu username benar/salah!
+        // Diagnostic Feedback (Verbose Errors)
         if (!isset($validCredentials[$u])) {
-            $error = "User <strong>'$u'</strong> tidak ditemukan dalam sistem.";
+            $error = "Node identity <strong>'$u'</strong> not recognized in registry.";
         } else {
-            $error = "Password salah untuk user <strong>'$u'</strong>. Password tersimpan di database versi 8.2.";
+            $error = "Credential mismatch for node <strong>'$u'</strong>. Registry Version: 8.2-STABLE.";
         }
     }
 }
 
-// VULN A05: Trigger error PHP yang verbose untuk demo
-if (isset($_GET['trigger_error'])) {
-    $undefined_var; // Notice: undefined
+// System Diagnostic Trigger
+if (isset($_GET['diag_trace'])) {
+    $undefined_var;
     $arr = ['a' => 1];
-    echo $arr['nonexistent']; // Warning
-    require_once 'nonexistent_file.php'; // Fatal error — bocorkan path!
+    echo $arr['nonexistent'];
+    require_once 'nonexistent_file.php';
 }
 ?>
 <!DOCTYPE html>
@@ -41,246 +41,109 @@ if (isset($_GET['trigger_error'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DevOps Portal — A05 Security Misconfiguration</title>
+    <title>Access Gateway | Titanium Cloud</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
         body {
-            font-family: 'Segoe UI', sans-serif;
-            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-direction: column;
-            gap: 20px;
-            padding: 20px;
+            font-family: 'Manrope', sans-serif;
+            background-color: #0f172a;
         }
 
-        .login-box {
-            background: white;
-            border-radius: 16px;
-            padding: 40px;
-            width: 420px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+        .industrial-blur {
+            background: rgba(30, 41, 59, 0.5);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
         }
 
-        .logo {
-            text-align: center;
-            margin-bottom: 28px;
-        }
-
-        .logo span {
-            font-size: 48px;
-        }
-
-        .logo h1 {
-            font-size: 22px;
-            color: #0f172a;
-            font-weight: 700;
-            margin-top: 8px;
-        }
-
-        .logo p {
-            font-size: 12px;
-            color: #64748b;
-            margin-top: 4px;
-        }
-
-        .vuln-badge {
-            background: #fef3c7;
-            border: 1px solid #f59e0b;
-            border-radius: 8px;
-            padding: 10px 14px;
-            margin-bottom: 16px;
-            font-size: 12px;
-            color: #92400e;
-        }
-
-        .vuln-badge strong {
-            display: block;
-            margin-bottom: 4px;
-        }
-
-        label {
-            display: block;
-            font-size: 13px;
-            font-weight: 600;
-            color: #334155;
-            margin-bottom: 6px;
-        }
-
-        input[type=text],
-        input[type=password] {
-            width: 100%;
-            padding: 11px 14px;
-            border: 2px solid #e2e8f0;
-            border-radius: 8px;
-            font-size: 14px;
-            margin-bottom: 14px;
-        }
-
-        input:focus {
-            outline: none;
-            border-color: #475569;
-        }
-
-        .btn {
-            width: 100%;
-            padding: 12px;
-            background: #1e293b;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 15px;
-            font-weight: 600;
-            cursor: pointer;
-        }
-
-        .btn:hover {
-            background: #0f172a;
-        }
-
-        .error {
-            background: #fee2e2;
-            color: #7f1d1d;
-            border-radius: 8px;
-            padding: 10px 14px;
-            margin-bottom: 14px;
-            font-size: 13px;
-        }
-
-        .hint {
-            background: #f8fafc;
-            border-radius: 8px;
-            padding: 14px;
-            font-size: 12px;
-            color: #475569;
-            margin-top: 14px;
-        }
-
-        .hint strong {
-            display: block;
-            margin-bottom: 6px;
-            color: #1e293b;
-        }
-
-        .hint ul {
-            padding-left: 16px;
-        }
-
-        .hint li {
-            margin-bottom: 3px;
-        }
-
-        .hint a {
-            color: #3b82f6;
-        }
-
-        .attack-panel {
-            background: rgba(255, 255, 255, 0.07);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            border-radius: 12px;
-            padding: 16px 20px;
-            width: 420px;
-            color: white;
-            font-size: 13px;
-        }
-
-        .attack-panel h3 {
-            font-size: 14px;
-            margin-bottom: 10px;
-            color: #fbbf24;
-        }
-
-        .attack-panel ul {
-            padding-left: 18px;
-        }
-
-        .attack-panel li {
-            margin-bottom: 6px;
-            line-height: 1.5;
-        }
-
-        .attack-panel a {
-            color: #7dd3fc;
-        }
-
-        code {
-            background: rgba(0, 0, 0, 0.4);
-            padding: 1px 5px;
-            border-radius: 3px;
-            font-size: 11px;
+        .accent-border {
+            border-left: 4px solid #3b82f6;
         }
     </style>
 </head>
 
-<body>
-    <div class="login-box">
-        <div class="logo">
-            <span>⚙️</span>
-            <h1>DevOps Portal</h1>
-            <p>Internal Dashboard — A05 Security Misconfiguration Lab</p>
-        </div>
+<body class="min-h-screen flex flex-col items-center justify-center p-6 bg-[#0f172a] text-slate-400">
 
-        <div class="vuln-badge">
-            <strong>⚠️ VULNERABILITY — A05 Security Misconfiguration</strong>
-            Default credentials aktif, file sensitif publik, verbose errors, phpinfo() terbuka.
-        </div>
-
-        <?php if ($error): ?>
-            <div class="error">❌
-                <?= $error ?>
+    <div class="max-w-[440px] w-full">
+        <!-- Brand Header -->
+        <div class="text-center mb-12">
+            <div
+                class="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-white border border-slate-200 mb-6 shadow-2xl shadow-blue-500/10">
+                <svg class="w-10 h-10 text-slate-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                        d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
             </div>
-        <?php endif; ?>
+            <h1 class="text-4xl font-extrabold text-white tracking-tight mb-2">Titanium</h1>
+            <p class="text-[10px] font-black text-slate-500 uppercase tracking-[0.4em]">Cloud Orchestration Node</p>
+        </div>
 
-        <form method="POST">
-            <label>Username</label>
-            <input type="text" name="username" placeholder="Coba: admin, devops, root">
-            <label>Password</label>
-            <input type="password" name="password" placeholder="Coba password yang sama dengan username">
-            <button type="submit" class="btn">🔓 Login ke DevOps Portal</button>
-        </form>
+        <!-- Login Container -->
+        <div
+            class="industrial-blur rounded-[2.5rem] p-10 shadow-[0_32px_64px_rgba(0,0,0,0.5)] relative overflow-hidden">
+            <div class="relative z-10">
+                <h2 class="text-xs font-black text-slate-500 uppercase tracking-widest mb-8">Node Authentication</h2>
 
-        <div class="hint">
-            <strong>🎯 Vulnerability Checklist:</strong>
-            <ul>
-                <li><a href="info.php" target="_blank">🔗 /info.php</a> — phpinfo() terbuka publik</li>
-                <li><a href=".env" target="_blank">🔗 /.env</a> — Environment file publik (AWS keys!)</li>
-                <li><a href="config.bak" target="_blank">🔗 /config.bak</a> — File backup konfigurasi</li>
-                <li><a href="database_backup.sql.bak" target="_blank">🔗 /database_backup.sql.bak</a> — Backup DB publik
-                </li>
-                <li><a href="?trigger_error=1" target="_blank">🔗 ?trigger_error=1</a> — Verbose PHP error</li>
-                <li><a href="/" target="_blank">🔗 / (root)</a> — Directory listing aktif!</li>
-            </ul>
-            <br>
-            <strong>🔑 Default Credentials:</strong>
-            <ul>
-                <li>admin / admin</li>
-                <li>devops / devops</li>
-                <li>root / root</li>
-            </ul>
+                <?php if ($error): ?>
+                    <div
+                        class="mb-8 p-4 bg-rose-500/10 border border-rose-500/20 text-rose-400 rounded-2xl text-[11px] font-bold accent-border">
+                        <?= $error ?>
+                    </div>
+                <?php endif; ?>
+
+                <form method="POST" class="space-y-6">
+                    <div>
+                        <label
+                            class="block text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-3 ml-1">Node
+                            Identifier</label>
+                        <input type="text" name="username" required
+                            class="w-full bg-slate-900/50 border border-slate-800 rounded-2xl p-4 text-sm font-bold text-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/5 transition-all outline-none"
+                            placeholder="Enter username">
+                    </div>
+                    <div>
+                        <label
+                            class="block text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-3 ml-1">Access
+                            Passkey</label>
+                        <input type="password" name="password" required
+                            class="w-full bg-slate-900/50 border border-slate-800 rounded-2xl p-4 text-sm font-bold text-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/5 transition-all outline-none"
+                            placeholder="••••••••">
+                    </div>
+
+                    <button type="submit"
+                        class="w-full bg-white hover:bg-slate-200 py-5 rounded-2xl text-slate-950 font-black text-xs uppercase tracking-[0.2em] shadow-2xl shadow-white/5 transition-all active:scale-[0.98]">
+                        Establish Control Link
+                    </button>
+                </form>
+
+                <div class="mt-12 pt-8 border-t border-slate-800/50">
+                    <p class="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-4">System Manifests</p>
+                    <div
+                        class="flex flex-wrap gap-x-6 gap-y-3 text-[10px] font-bold text-blue-500/60 uppercase tracking-widest">
+                        <a href="info.php" target="_blank" class="hover:text-blue-400">Node Info</a>
+                        <a href=".env" target="_blank" class="hover:text-blue-400">Env Manifest</a>
+                        <a href="config.bak" target="_blank" class="hover:text-blue-400">Config Backup</a>
+                        <a href="database_backup.sql.bak" target="_blank" class="hover:text-blue-400">DB Archive</a>
+                        <a href="?diag_trace=1" target="_blank" class="hover:text-blue-400">Diagnostic Trace</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Subtle glow -->
+            <div class="absolute -top-24 -left-24 w-48 h-48 bg-blue-500/5 rounded-full blur-3xl"></div>
+        </div>
+
+        <!-- Meta info -->
+        <div class="mt-10 text-center">
+            <p class="text-[10px] font-bold text-slate-700 uppercase tracking-[0.3em] leading-relaxed">
+                Protected by Titanium Core Security Protocols.<br>
+                Unauthorized Access is Prohibited.
+            </p>
         </div>
     </div>
 
-    <div class="attack-panel">
-        <h3>🏹 Attack Scenarios — A05 Security Misconfiguration</h3>
-        <ul>
-            <li><strong>Directory Listing</strong>: Buka <code>/</code> atau subfolder mana saja — semua file tampil
-            </li>
-            <li><strong>Sensitive Files</strong>: <code>/.env</code> berisi AWS keys, DB password, payment gateway key
-            </li>
-            <li><strong>phpinfo()</strong>: <code>/info.php</code> bocorkan versi PHP, modul, env vars, dan path server
-            </li>
-            <li><strong>Verbose Error</strong>: <code>?trigger_error=1</code> → PHP error bocorkan path file server</li>
-            <li><strong>Default Creds</strong>: Login dengan admin/admin → berhasil!</li>
-            <li><strong>User Enumeration</strong>: Pesan error berbeda untuk "user tidak ada" vs "password salah"</li>
-        </ul>
-    </div>
 </body>
 
 </html>

@@ -16,21 +16,13 @@ $stmt = $pdo->prepare("SELECT * FROM sl_users WHERE id = ?");
 $stmt->execute([$userId]);
 $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-// VULN A07: Logout tidak menghapus session di server — hanya hapus cookie
+// VULN A07: Logout does NOT invalidate session on server
 if (isset($_GET['logout'])) {
-    // VULN: session_destroy() tidak dipanggil!
-    // Hanya unset cookie saja
+    // VULN: session_destroy() is purposefully omitted
     setcookie(session_name(), '', time() - 3600, '/');
     setcookie('remember_me', '', time() - 3600, '/');
-    // Session di server MASIH ADA dan bisa dipakai!
     header("Location: index.php");
     exit;
-}
-
-// Decode remember_me token untuk demo
-$decodedToken = '';
-if ($user['remember_token']) {
-    $decodedToken = base64_decode($user['remember_token']);
 }
 ?>
 <!DOCTYPE html>
@@ -38,290 +30,203 @@ if ($user['remember_token']) {
 
 <head>
     <meta charset="UTF-8">
-    <title>SecureLogin Corp — Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enterprise Dashboard | SecureLogin Corp</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
         body {
-            font-family: 'Segoe UI', sans-serif;
-            background: #f5f3ff;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #f8fafc;
         }
 
-        .nav {
-            background: #4f46e5;
-            color: white;
-            padding: 14px 28px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+        .sidebar {
+            background: linear-gradient(180deg, #1e1b4b 0%, #312e81 100%);
         }
 
-        .nav h1 {
-            font-size: 18px;
-        }
-
-        .nav a {
-            color: #c7d2fe;
-            text-decoration: none;
-            font-size: 14px;
-        }
-
-        .container {
-            max-width: 960px;
-            margin: 28px auto;
-            padding: 0 20px;
-        }
-
-        .vuln-panel {
-            background: #fef3c7;
-            border: 1px solid #f59e0b;
-            border-radius: 12px;
-            padding: 16px 20px;
-            margin-bottom: 20px;
-        }
-
-        .vuln-panel h3 {
-            color: #92400e;
-            font-size: 14px;
-            margin-bottom: 8px;
-        }
-
-        .vuln-panel ul {
-            font-size: 12px;
-            color: #78350f;
-            padding-left: 16px;
-        }
-
-        .vuln-panel li {
-            margin-bottom: 3px;
-        }
-
-        .card {
-            background: white;
-            border-radius: 12px;
-            padding: 22px;
-            margin-bottom: 16px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
-        }
-
-        .card h2 {
-            font-size: 15px;
-            color: #312e81;
-            margin-bottom: 14px;
-            border-bottom: 1px solid #ede9fe;
-            padding-bottom: 10px;
-        }
-
-        .info-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px 0;
-            border-bottom: 1px solid #f5f3ff;
-            font-size: 13px;
-        }
-
-        .info-row:last-child {
-            border: none;
-        }
-
-        .info-row label {
-            color: #6b7280;
-            font-size: 12px;
-        }
-
-        .info-row span {
-            color: #1e1b4b;
-            font-weight: 600;
-            font-family: monospace;
-        }
-
-        .badge {
-            display: inline-block;
-            padding: 2px 10px;
-            border-radius: 12px;
-            font-size: 11px;
-            font-weight: 600;
-        }
-
-        .badge-admin {
-            background: #ede9fe;
-            color: #4f46e5;
-        }
-
-        .badge-user {
-            background: #e0f2fe;
-            color: #0369a1;
-        }
-
-        .vuln-value {
-            color: #dc2626 !important;
-            background: #fef2f2;
-            padding: 2px 6px;
-            border-radius: 4px;
-        }
-
-        .attack-box {
-            background: #ede9fe;
-            border-radius: 8px;
-            padding: 12px;
-            margin-top: 12px;
-            font-size: 12px;
-            color: #3730a3;
-        }
-
-        .attack-box strong {
-            display: block;
-            margin-bottom: 6px;
-        }
-
-        .attack-box ul {
-            padding-left: 16px;
-        }
-
-        code {
-            background: #ddd6fe;
-            padding: 1px 5px;
-            border-radius: 3px;
-            font-size: 11px;
-        }
-
-        .btn-logout {
-            background: #dc2626;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 13px;
-            font-weight: 600;
-            text-decoration: none;
-            display: inline-block;
-        }
-
-        .btn-vuln-logout {
-            background: #f59e0b;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 13px;
-            font-weight: 600;
-            text-decoration: none;
-            display: inline-block;
+        .glass-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
         }
     </style>
 </head>
 
-<body>
-    <nav class="nav">
-        <h1>🔐 SecureLogin Corp — SSO Dashboard</h1>
-        <div>
-            <span style="margin-right:14px;">Selamat datang, <strong>
-                    <?= htmlspecialchars($username) ?>
-                </strong></span>
-            <a href="?logout=1" class="btn-logout">Logout (VULN)</a>
-        </div>
-    </nav>
-
-    <div class="container">
-        <div class="vuln-panel">
-            <h3>⚠️ OWASP A07 — Authentication Failures: Vulnerabilities Lab Ini</h3>
-            <ul>
-                <li><strong>Session Fixation</strong>: Session ID tidak di-regenerate setelah login — ID sebelum login
-                    sama dengan setelah login</li>
-                <li><strong>Session tidak expire saat logout</strong>: Tombol Logout hanya hapus cookie, session server
-                    tetap hidup</li>
-                <li><strong>Brute Force</strong>: Tidak ada rate limiting atau account lockout</li>
-                <li><strong>Predictable Remember-Me Token</strong>: Token = base64(user_id:timestamp) — bisa diprediksi
-                </li>
-                <li><strong>Password lemah diterima</strong>: "pass", "123456", "admin" lolos tanpa kompleksitas</li>
-            </ul>
+<body class="flex min-h-screen">
+    <!-- Sidebar -->
+    <aside class="w-72 sidebar text-slate-300 flex flex-col p-6 space-y-8">
+        <div class="flex items-center gap-3 px-2">
+            <div
+                class="w-10 h-10 rounded-xl bg-indigo-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002-2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+            </div>
+            <span class="text-xl font-bold text-white tracking-tight">SecureLogin</span>
         </div>
 
-        <div class="card">
-            <h2>🪪 Informasi Session (Vulnerability Demo)</h2>
-            <div class="info-row">
-                <label>Username</label>
-                <span>
-                    <?= htmlspecialchars($username) ?> <span class="badge badge-<?= $role ?>">
-                        <?= strtoupper($role) ?>
-                    </span>
-                </span>
-            </div>
-            <div class="info-row">
-                <label>Session ID (TIDAK berubah setelah login!)</label>
-                <span class="vuln-value">
-                    <?= htmlspecialchars($sessionId) ?>
-                </span>
-            </div>
-            <div class="info-row">
-                <label>Remember-Me Token (PREDICTABLE)</label>
-                <span class="vuln-value">
-                    <?= htmlspecialchars($user['remember_token'] ?: 'Tidak aktif — centang "Ingat saya" saat login') ?>
-                </span>
-            </div>
-            <?php if ($decodedToken): ?>
-                <div class="info-row">
-                    <label>Token Decoded (base64)</label>
-                    <span class="vuln-value">
-                        <?= htmlspecialchars($decodedToken) ?> → format: user_id:timestamp_hari_ini
-                    </span>
-                </div>
-            <?php endif; ?>
-            <div class="info-row">
-                <label>Password</label>
-                <span class="vuln-value">Lemah! Diterima tanpa validasi kompleksitas</span>
-            </div>
+        <nav class="flex-1 space-y-2">
+            <a href="#"
+                class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/10 text-white font-semibold transition-all">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                </svg>
+                Dashboard
+            </a>
+            <a href="#"
+                class="flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-white/5 hover:text-white transition-all font-medium">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                Profil Saya
+            </a>
+            <a href="#"
+                class="flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-white/5 hover:text-white transition-all font-medium">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Dokumen Sensus
+            </a>
+            <a href="#"
+                class="flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-white/5 hover:text-white transition-all font-medium text-rose-400">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002-2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+                Keamanan Akun
+            </a>
+        </nav>
 
-            <div class="attack-box">
-                <strong>🎯 Cara Exploit Session Fixation:</strong>
-                <ul>
-                    <li>Step 1: Buka <code>/?PHPSESSID=HACKER_CONTROLLED_SESSION</code></li>
-                    <li>Step 2: Kirim URL tersebut ke korban (misalnya via phishing email)</li>
-                    <li>Step 3: Korban login menggunakan session ID yang sudah kamu tentukan</li>
-                    <li>Step 4: Kamu sudah bisa akses akun korban dengan session ID yang sama!</li>
-                    <li>Kenapa bisa? Karena <code>session_regenerate_id(true)</code> tidak dipanggil setelah login</li>
-                </ul>
+        <div class="pt-6 border-t border-white/10">
+            <a href="?logout=1"
+                class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-rose-500/10 text-rose-400 font-bold hover:bg-rose-500 hover:text-white transition-all active:scale-[0.98]">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+                Keluar (SSO)
+            </a>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 p-10 overflow-y-auto">
+        <header class="flex justify-between items-center mb-10">
+            <div>
+                <h2 class="text-3xl font-extrabold text-slate-900 tracking-tight">Ringkasan Aktivitas</h2>
+                <p class="text-slate-500 font-medium">Selamat datang kembali, <?= htmlspecialchars($username) ?>.</p>
             </div>
-            <div class="attack-box" style="margin-top:8px;background:#fff7ed;border:none;">
-                <strong>🎯 Cara Exploit Session tidak di-invalidasi saat Logout:</strong>
-                <ul>
-                    <li>Step 1: Catat Session ID saat ini: <code><?= htmlspecialchars($sessionId) ?></code></li>
-                    <li>Step 2: Klik Logout → session cookie dihapus dari browser</li>
-                    <li>Step 3: Buka browser baru atau gunakan curl:
-                        <code>curl -b "PHPSESSID=<?= htmlspecialchars($sessionId) ?>" http://localhost:8006/dashboard.php</code>
-                    </li>
-                    <li>Step 4: Kamu masih bisa akses dashboard! Session server belum dihapus.</li>
-                </ul>
+            <div class="flex items-center gap-4">
+                <div class="text-right mr-2">
+                    <p class="text-sm font-bold text-slate-900 line-clamp-1"><?= htmlspecialchars($username) ?></p>
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest"><?= strtoupper($role) ?>
+                        Account</p>
+                </div>
+                <div
+                    class="w-12 h-12 rounded-2xl bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-lg border-2 border-indigo-200">
+                    <?= strtoupper(substr($username, 0, 1)) ?>
+                </div>
+            </div>
+        </header>
+
+        <!-- Stats Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-10">
+            <div class="glass-card p-8 rounded-[2rem] shadow-sm">
+                <div class="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 mb-6">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                </div>
+                <p class="text-slate-500 text-sm font-bold uppercase tracking-widest mb-1">Akses Sistem</p>
+                <h3 class="text-3xl font-black text-indigo-900">12 Terkoneksi</h3>
+            </div>
+            <div class="glass-card p-8 rounded-[2rem] shadow-sm">
+                <div class="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600 mb-6">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+                <p class="text-slate-500 text-sm font-bold uppercase tracking-widest mb-1">Status Keamanan</p>
+                <h3 class="text-3xl font-black text-emerald-900">Optimal</h3>
+            </div>
+            <div class="glass-card p-8 rounded-[2rem] shadow-sm">
+                <div class="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-600 mb-6">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+                <p class="text-slate-500 text-sm font-bold uppercase tracking-widest mb-1">Masa Aktif Token</p>
+                <h3 class="text-3xl font-black text-amber-900">22 Jam</h3>
             </div>
         </div>
 
-        <div class="card">
-            <h2>📊 Menu SSO</h2>
-            <p style="color:#6b7280;font-size:13px;">Ini adalah contoh dashboard setelah berhasil login. Di dunia nyata,
-                ini bisa berisi data sensitif perusahaan.</p>
-            <div style="margin-top:16px;display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">
-                <div style="background:#f0fdf4;border-radius:8px;padding:14px;text-align:center;">
-                    <div style="font-size:24px;">📧</div>
-                    <div style="font-size:13px;color:#166534;font-weight:600;margin-top:4px;">Email Corporate</div>
+        <!-- System Info & Logs -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
+            <div class="bg-white p-8 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.03)] border border-slate-100">
+                <div class="flex items-center justify-between mb-8">
+                    <h4 class="text-xl font-extrabold text-slate-900 tracking-tight">Informasi Sesi</h4>
+                    <span
+                        class="px-3 py-1 bg-emerald-100 text-emerald-600 rounded-lg text-[10px] font-black uppercase tracking-widest">Active</span>
                 </div>
-                <div style="background:#eff6ff;border-radius:8px;padding:14px;text-align:center;">
-                    <div style="font-size:24px;">📁</div>
-                    <div style="font-size:13px;color:#1d4ed8;font-weight:600;margin-top:4px;">File Server</div>
+                <div class="space-y-4">
+                    <div class="flex justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                        <span class="text-xs font-bold text-slate-400 uppercase tracking-widest">Global Session
+                            ID</span>
+                        <span
+                            class="text-xs font-mono font-bold text-slate-900"><?= htmlspecialchars($sessionId) ?></span>
+                    </div>
+                    <div class="flex justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                        <span class="text-xs font-bold text-slate-400 uppercase tracking-widest">Node ID</span>
+                        <span class="text-xs font-bold text-slate-900">ENT-NOD-003</span>
+                    </div>
+                    <?php if ($user['remember_token']): ?>
+                        <div class="p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100">
+                            <span
+                                class="block text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-2 text-center">Persistence
+                                Token</span>
+                            <span
+                                class="block text-xs font-mono font-bold text-indigo-900 break-all text-center"><?= htmlspecialchars($user['remember_token']) ?></span>
+                        </div>
+                    <?php endif; ?>
                 </div>
-                <div style="background:#fef3c7;border-radius:8px;padding:14px;text-align:center;">
-                    <div style="font-size:24px;">💰</div>
-                    <div style="font-size:13px;color:#92400e;font-weight:600;margin-top:4px;">Payroll System</div>
+            </div>
+
+            <div class="bg-white p-8 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.03)] border border-slate-100">
+                <h4 class="text-xl font-extrabold text-slate-900 tracking-tight mb-8">Log Aktivitas Terbaru</h4>
+                <div class="space-y-6">
+                    <div class="flex gap-4">
+                        <div class="w-2 h-2 rounded-full bg-indigo-500 mt-1.5 shrink-0"></div>
+                        <div>
+                            <p class="text-sm font-bold text-slate-900">Berhasil masuk ke portal SSO</p>
+                            <p class="text-xs text-slate-400 font-medium">Baru saja • Dari IP: 192.168.1.45</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-4">
+                        <div class="w-2 h-2 rounded-full bg-slate-300 mt-1.5 shrink-0"></div>
+                        <div>
+                            <p class="text-sm font-bold text-slate-700">Perubahan pengaturan keamanan ditunda</p>
+                            <p class="text-xs text-slate-400 font-medium">2 jam yang lalu</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-4">
+                        <div class="w-2 h-2 rounded-full bg-slate-300 mt-1.5 shrink-0"></div>
+                        <div>
+                            <p class="text-sm font-bold text-slate-700">Akses dokumen teknis disetujui</p>
+                            <p class="text-xs text-slate-400 font-medium">Kemarin, 14:20</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
+    </main>
 </body>
 
 </html>

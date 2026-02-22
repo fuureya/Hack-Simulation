@@ -1,8 +1,6 @@
 <?php
-// VULN A07: Session Fixation — kita izinkan session ID dari GET/COOKIE sebelum login
-// Jika ?PHPSESSID=hackercontrolled dikirim sebelum login, session itu akan digunakan
+// VULN A07: Session Fixation
 if (isset($_GET['PHPSESSID'])) {
-    // VULN: Attacker bisa set session ID sebelum korban login
     session_id($_GET['PHPSESSID']);
 }
 session_start();
@@ -11,7 +9,6 @@ require_once 'db.php';
 $error = '';
 $success = '';
 
-// VULN A07: Tidak ada account lockout setelah banyak percobaan gagal
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = trim($_POST['username'] ?? '');
     $password = $_POST['password'] ?? '';
@@ -21,17 +18,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if ($user && password_verify($password, $user['password'])) {
-        // VULN A07: Session ID TIDAK di-regenerate setelah login!
-        // Seharusnya: session_regenerate_id(true);
-        // Karena tidak di-regenerate, session fixation berhasil!
-
+        // VULN A07: Session ID NOT regenerated
         $_SESSION['sl_user_id'] = $user['id'];
         $_SESSION['sl_username'] = $user['username'];
         $_SESSION['sl_role'] = $user['role'];
 
-        // VULN A07: Remember-me token predictable — hanya nomor urut user
         if (isset($_POST['remember'])) {
-            // VULN: token = user_id + timestamp yang predictable
+            // VULN A07: Predictable remember-me token
             $token = base64_encode($user['id'] . ':' . strtotime('today'));
             setcookie('remember_me', $token, time() + 86400 * 30, '/');
             $pdo->prepare("UPDATE sl_users SET remember_token = ? WHERE id = ?")->execute([$token, $user['id']]);
@@ -40,8 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header("Location: dashboard.php");
         exit;
     } else {
-        // VULN A07: Tidak ada lockout, tidak ada delay — brute force bebas
-        $error = "Username atau password salah.";
+        $error = "Identitas atau kredensial yang Anda masukkan tidak valid.";
     }
 }
 
@@ -59,15 +51,6 @@ if (!isset($_SESSION['sl_user_id']) && isset($_COOKIE['remember_me'])) {
         exit;
     }
 }
-
-// VULN A07: Logout tidak invalidasi session server-side
-if (isset($_GET['logout_test'])) {
-    // VULN: session_destroy() tidak dipanggil di sini sebagai demo
-    // Token lama masih valid!
-    $success = "Percobaan logout tanpa destroy session — session masih valid di server!";
-}
-
-$currentSessId = session_id();
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -75,272 +58,109 @@ $currentSessId = session_id();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SecureLogin Corp — A07 Auth Failures</title>
+    <title>SecureLogin Enterprise SSO</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
         body {
-            font-family: 'Segoe UI', sans-serif;
-            background: linear-gradient(135deg, #312e81 0%, #1e1b4b 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-direction: column;
-            gap: 20px;
-            padding: 20px;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #f8fafc;
+            background-image: radial-gradient(at 0% 0%, rgba(79, 70, 229, 0.05) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(99, 102, 241, 0.05) 0px, transparent 50%);
         }
 
-        .login-box {
-            background: white;
-            border-radius: 16px;
-            padding: 40px;
-            width: 440px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+        .glass {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
         }
 
-        .logo {
-            text-align: center;
-            margin-bottom: 28px;
+        .btn-primary {
+            background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        .logo span {
-            font-size: 48px;
-        }
-
-        .logo h1 {
-            font-size: 22px;
-            color: #1e1b4b;
-            font-weight: 700;
-            margin-top: 8px;
-        }
-
-        .logo p {
-            font-size: 12px;
-            color: #64748b;
-            margin-top: 4px;
-        }
-
-        .vuln-badge {
-            background: #fef3c7;
-            border: 1px solid #f59e0b;
-            border-radius: 8px;
-            padding: 10px 14px;
-            margin-bottom: 16px;
-            font-size: 12px;
-            color: #92400e;
-        }
-
-        .vuln-badge strong {
-            display: block;
-            margin-bottom: 4px;
-        }
-
-        label {
-            display: block;
-            font-size: 13px;
-            font-weight: 600;
-            color: #334155;
-            margin-bottom: 6px;
-        }
-
-        input[type=text],
-        input[type=password] {
-            width: 100%;
-            padding: 11px 14px;
-            border: 2px solid #e2e8f0;
-            border-radius: 8px;
-            font-size: 14px;
-            margin-bottom: 14px;
-        }
-
-        input:focus {
-            outline: none;
-            border-color: #4f46e5;
-        }
-
-        .checkbox-row {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 14px;
-        }
-
-        .checkbox-row label {
-            margin-bottom: 0;
-            font-weight: 400;
-            font-size: 13px;
-        }
-
-        .btn {
-            width: 100%;
-            padding: 12px;
-            background: #4f46e5;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 15px;
-            font-weight: 600;
-            cursor: pointer;
-        }
-
-        .btn:hover {
-            background: #4338ca;
-        }
-
-        .error {
-            background: #fee2e2;
-            color: #b91c1c;
-            border-radius: 8px;
-            padding: 10px 14px;
-            margin-bottom: 14px;
-            font-size: 13px;
-        }
-
-        .success {
-            background: #dcfce7;
-            color: #166534;
-            border-radius: 8px;
-            padding: 10px 14px;
-            margin-bottom: 14px;
-            font-size: 13px;
-        }
-
-        .sess-info {
-            background: #f8fafc;
-            border-radius: 8px;
-            padding: 12px;
-            margin-top: 14px;
-            font-size: 12px;
-            color: #475569;
-            font-family: monospace;
-        }
-
-        .hint {
-            background: #ede9fe;
-            border-radius: 8px;
-            padding: 14px;
-            font-size: 12px;
-            color: #3730a3;
-            margin-top: 14px;
-        }
-
-        .hint strong {
-            display: block;
-            margin-bottom: 6px;
-        }
-
-        .hint ul {
-            padding-left: 16px;
-        }
-
-        .hint li {
-            margin-bottom: 3px;
-        }
-
-        .attack-panel {
-            background: rgba(255, 255, 255, 0.08);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 12px;
-            padding: 16px 20px;
-            width: 440px;
-            color: white;
-            font-size: 13px;
-        }
-
-        .attack-panel h3 {
-            font-size: 14px;
-            margin-bottom: 10px;
-            color: #a5b4fc;
-        }
-
-        .attack-panel ol {
-            padding-left: 18px;
-        }
-
-        .attack-panel li {
-            margin-bottom: 6px;
-            line-height: 1.5;
-        }
-
-        code {
-            background: rgba(0, 0, 0, 0.4);
-            padding: 1px 5px;
-            border-radius: 3px;
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.3);
         }
     </style>
 </head>
 
-<body>
-    <div class="login-box">
-        <div class="logo">
-            <span>🔐</span>
-            <h1>SecureLogin Corp</h1>
-            <p>SSO Portal — A07 Identification & Authentication Failures Lab</p>
-        </div>
-
-        <div class="vuln-badge">
-            <strong>⚠️ VULNERABILITY — A07 Authentication Failures</strong>
-            Session fixation, tidak ada lockout, remember-me predictable, session tidak expire.
-        </div>
-
-        <?php if ($error): ?>
-            <div class="error">❌
-                <?= htmlspecialchars($error) ?>
+<body class="min-h-screen flex items-center justify-center p-6">
+    <div class="w-full max-w-[480px]">
+        <div class="text-center mb-10">
+            <div
+                class="inline-flex items-center justify-center w-20 h-20 rounded-[2rem] bg-indigo-600 shadow-2xl shadow-indigo-200 mb-6 bg-gradient-to-tr from-indigo-600 to-indigo-500">
+                <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002-2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
             </div>
-        <?php endif; ?>
-        <?php if ($success): ?>
-            <div class="success">✅
-                <?= htmlspecialchars($success) ?>
-            </div>
-        <?php endif; ?>
-
-        <form method="POST">
-            <label>Username</label>
-            <input type="text" name="username" placeholder="alice, bob, atau admin">
-            <label>Password</label>
-            <input type="password" name="password" placeholder="pass, 123456, atau admin">
-            <div class="checkbox-row">
-                <input type="checkbox" id="remember" name="remember" value="1">
-                <label for="remember">Ingat saya (30 hari)</label>
-            </div>
-            <button type="submit" class="btn">🔑 Login</button>
-        </form>
-
-        <div class="sess-info">
-            <strong>Session ID saat ini:</strong><br>
-            <?= htmlspecialchars($currentSessId) ?>
-            <br><small style="color:#94a3b8;">(setelah login, perhatikan apakah session ID berubah — VULN jika
-                tidak!)</small>
+            <h1 class="text-3xl font-extrabold text-slate-900 tracking-tight">SecureLogin SSO</h1>
+            <p class="text-slate-500 mt-2 font-medium">Sistem Autentikasi Terpusat Perusahaan</p>
         </div>
 
-        <div class="hint">
-            <strong>🎯 Test Credentials & Attack Scenarios:</strong>
-            <ul>
-                <li><strong>alice</strong> / pass &nbsp;|&nbsp; <strong>bob</strong> / 123456 &nbsp;|&nbsp;
-                    <strong>admin</strong> / admin</li>
-                <li>Session Fixation: <code>?PHPSESSID=hacker123</code> sebelum alice login</li>
-                <li>Brute force: tidak ada lockout sama sekali</li>
-                <li>Logout test: <a href="?logout_test=1">klik di sini</a> → session tidak invalid</li>
-            </ul>
-        </div>
-    </div>
+        <div class="glass rounded-[2.5rem] p-10 shadow-[0_20px_50px_rgba(0,0,0,0.05)] border border-white/40">
+            <?php if ($error): ?>
+                <div
+                    class="mb-8 p-4 bg-rose-50 border border-rose-100 text-rose-600 rounded-2xl text-xs font-bold flex items-center gap-3">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <?= htmlspecialchars($error) ?>
+                </div>
+            <?php endif; ?>
 
-    <div class="attack-panel">
-        <h3>🏹 Attack Scenarios — A07 Auth Failures</h3>
-        <ol>
-            <li><strong>Session Fixation</strong>: Buka <code>/?PHPSESSID=ATTACKER_ID</code> → kirim link ke korban →
-                setelah korban login, attacker pakai session yang sama</li>
-            <li><strong>Session Not Invalidated on Logout</strong>: Logout → session ID lama masih valid di server</li>
-            <li><strong>Brute Force Password</strong>: Tidak ada lockout, tidak ada CAPTCHA</li>
-            <li><strong>Predictable Remember-Me Token</strong>: Token = base64(<code>user_id:timestamp_today</code>) →
-                mudah diprediksi</li>
-            <li><strong>Weak Password Accepted</strong>: Password "pass" & "123456" diterima tanpa kompleksitas</li>
-        </ol>
+            <form method="POST" class="space-y-6">
+                <div>
+                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Nama
+                        Pengguna (SSO ID)</label>
+                    <input type="text" name="username" required
+                        class="w-full bg-white border border-slate-200 rounded-2xl px-5 py-4 text-sm font-semibold focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all"
+                        placeholder="Masukkan username Anda">
+                </div>
+                <div>
+                    <div class="flex justify-between items-center mb-2 px-1">
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Kata
+                            Sandi</label>
+                        <a href="#"
+                            class="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 uppercase tracking-widest">Lupa
+                            Sandi?</a>
+                    </div>
+                    <input type="password" name="password" required
+                        class="w-full bg-white border border-slate-200 rounded-2xl px-5 py-4 text-sm font-semibold focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all"
+                        placeholder="••••••••">
+                </div>
+
+                <div class="flex items-center justify-between py-2">
+                    <label class="flex items-center gap-3 cursor-pointer group">
+                        <div class="relative flex items-center">
+                            <input type="checkbox" name="remember"
+                                class="peer h-5 w-5 cursor-pointer appearance-none rounded-md border-2 border-slate-200 transition-all checked:bg-indigo-600 checked:border-indigo-600" />
+                            <svg class="absolute h-3.5 w-3.5 text-white pointer-events-none opacity-0 peer-checked:opacity-100 left-0.5 top-0.5"
+                                fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="4">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                            </svg>
+                        </div>
+                        <span
+                            class="text-xs font-bold text-slate-500 group-hover:text-slate-700 transition-colors">Ingat
+                            saya di perangkat ini</span>
+                    </label>
+                </div>
+
+                <button type="submit"
+                    class="btn-primary w-full py-5 rounded-2xl text-white font-bold shadow-xl shadow-indigo-200 active:scale-[0.98]">
+                    Masuk Sekarang
+                </button>
+            </form>
+        </div>
+
+        <p class="text-center mt-10 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">
+            &copy; 2026 SecureLogin Corp Enterprise Division
+        </p>
     </div>
 </body>
 

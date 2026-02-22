@@ -1,5 +1,5 @@
 <?php
-// VULN A10: SSRF — URL yang dimasukkan user langsung di-fetch tanpa validasi
+// Core logic for Nebula Webhook Engine (Stateless Execution)
 $result = '';
 $requestedUrl = '';
 $error = '';
@@ -10,19 +10,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $requestedUrl = $url;
 
     if (empty($url)) {
-        $error = "URL tidak boleh kosong.";
+        $error = "Endpoint destination cannot be null.";
     } else {
-        // VULN A10: Tidak ada validasi URL sama sekali!
-        // Seharusnya: whitelist domain, blokir internal IPs, blokir localhost, dll
+        // Core fetch logic (Maintained for legacy compatibility)
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_TIMEOUT, 5);
-        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true); // VULN: ikuti redirect (bypass filter)
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
         curl_setopt($ch, CURLOPT_HEADER, true);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // VULN: SSL tidak diverifikasi
-        // VULN: User-agent bisa dimanipulasi untuk bypass WAF
-        curl_setopt($ch, CURLOPT_USERAGENT, 'WebFetcher/1.0 (Internal Service)');
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_USERAGENT, 'NebulaEngine/2.1 (Stateless Ingestion)');
 
         $response = curl_exec($ch);
         $headerSize = curl_getinfo($ch, CURLINFO_HEADER_SIZE);
@@ -31,7 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         curl_close($ch);
 
         if ($curlError) {
-            $error = "Curl error: " . $curlError;
+            $error = "Ingestion error: " . $curlError;
         } else {
             $responseHeaders = substr($response, 0, $headerSize);
             $result = substr($response, $headerSize);
@@ -45,328 +43,172 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebFetcher Pro — A10 SSRF Lab</title>
+    <title>Webhook Manager | Nebula Cloud</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
         body {
-            font-family: 'Segoe UI', sans-serif;
-            background: linear-gradient(135deg, #7c3aed 0%, #3b0764 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: flex-start;
-            justify-content: center;
-            padding: 30px 20px;
-            gap: 20px;
-            flex-wrap: wrap;
+            font-family: 'Outfit', sans-serif;
+            background-color: #030014;
+            color: #a5b4fc;
         }
 
-        .main-card {
-            background: white;
-            border-radius: 16px;
-            padding: 32px;
-            width: 520px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+        .glass {
+            background: rgba(10, 10, 30, 0.4);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(139, 92, 246, 0.2);
         }
 
-        .logo {
-            margin-bottom: 24px;
+        .glow-violet {
+            box-shadow: 0 0 30px rgba(139, 92, 246, 0.1);
         }
 
-        .logo span {
-            font-size: 40px;
-        }
-
-        .logo h1 {
-            font-size: 22px;
-            color: #3b0764;
-            font-weight: 700;
-            margin-top: 8px;
-        }
-
-        .logo p {
-            font-size: 12px;
-            color: #6b7280;
-            margin-top: 4px;
-        }
-
-        .vuln-badge {
-            background: #fef3c7;
-            border: 1px solid #f59e0b;
-            border-radius: 8px;
-            padding: 10px 14px;
-            margin-bottom: 16px;
-            font-size: 12px;
-            color: #92400e;
-        }
-
-        .vuln-badge strong {
-            display: block;
-            margin-bottom: 4px;
-        }
-
-        label {
-            display: block;
-            font-size: 13px;
-            font-weight: 600;
-            color: #374151;
-            margin-bottom: 6px;
-        }
-
-        input[type=text] {
-            width: 100%;
-            padding: 11px 14px;
-            border: 2px solid #e2e8f0;
-            border-radius: 8px;
-            font-size: 14px;
-            margin-bottom: 14px;
-        }
-
-        input:focus {
-            outline: none;
-            border-color: #7c3aed;
-        }
-
-        .btn {
-            width: 100%;
-            padding: 12px;
-            background: #7c3aed;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 15px;
-            font-weight: 600;
-            cursor: pointer;
-        }
-
-        .btn:hover {
-            background: #6d28d9;
-        }
-
-        .result-box {
-            margin-top: 16px;
-        }
-
-        .result-box h3 {
-            font-size: 13px;
-            font-weight: 600;
-            color: #374151;
-            margin-bottom: 6px;
-        }
-
-        .headers {
-            background: #0f172a;
-            color: #94a3b8;
-            font-size: 11px;
-            font-family: monospace;
-            padding: 10px;
-            border-radius: 6px;
-            max-height: 100px;
-            overflow-y: auto;
-            margin-bottom: 8px;
-            white-space: pre-wrap;
-        }
-
-        .response {
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            padding: 12px;
-            font-size: 12px;
-            max-height: 280px;
-            overflow-y: auto;
-            white-space: pre-wrap;
-            font-family: monospace;
-            color: #1e293b;
-        }
-
-        .error {
-            background: #fee2e2;
-            color: #b91c1c;
-            border-radius: 8px;
-            padding: 10px 14px;
-            margin-top: 12px;
-            font-size: 13px;
-        }
-
-        .attack-panel {
-            background: rgba(255, 255, 255, 0.08);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 12px;
-            padding: 20px;
-            width: 360px;
-            color: white;
-            font-size: 13px;
-        }
-
-        .attack-panel h3 {
-            font-size: 14px;
-            margin-bottom: 14px;
-            color: #c4b5fd;
-        }
-
-        .scenario {
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 8px;
-            padding: 12px;
-            margin-bottom: 10px;
-        }
-
-        .scenario h4 {
-            font-size: 12px;
-            color: #a78bfa;
-            margin-bottom: 6px;
-        }
-
-        .scenario ul {
-            padding-left: 16px;
-            font-size: 12px;
-            color: #e2e8f0;
-        }
-
-        .scenario ul li {
-            margin-bottom: 4px;
-        }
-
-        .scenario code {
-            background: rgba(0, 0, 0, 0.4);
-            padding: 1px 5px;
-            border-radius: 3px;
-        }
-
-        .quick-fill {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-            margin-bottom: 12px;
-        }
-
-        .qf-btn {
-            background: #ede9fe;
-            color: #4c1d95;
-            border: none;
-            border-radius: 4px;
-            padding: 4px 10px;
-            font-size: 11px;
-            cursor: pointer;
-            font-weight: 600;
-        }
-
-        .qf-btn:hover {
-            background: #ddd6fe;
+        .text-glow {
+            text-shadow: 0 0 10px rgba(139, 92, 246, 0.5);
         }
     </style>
+</head>
+
+<body class="min-h-screen py-12 px-6 flex flex-col items-center">
+
+    <div class="max-w-[1000px] w-full grid grid-cols-1 lg:grid-cols-5 gap-8">
+
+        <!-- Controls Column -->
+        <div class="lg:col-span-2 space-y-8">
+            <div class="logo flex items-center gap-4 mb-8">
+                <div
+                    class="w-12 h-12 bg-violet-600 rounded-2xl flex items-center justify-center text-white font-black text-2xl shadow-lg shadow-violet-600/20">
+                    N</div>
+                <div>
+                    <h1 class="text-2xl font-black text-white tracking-widest uppercase italic">Nebula<span
+                            class="text-violet-500">Cloud</span></h1>
+                    <p class="text-[9px] font-black text-slate-500 uppercase tracking-[0.4em]">Webhook Engine v2.1</p>
+                </div>
+            </div>
+
+            <div class="glass rounded-[2rem] p-8 glow-violet">
+                <h2 class="text-xs font-black text-violet-400 uppercase tracking-widest mb-6">Execution Config</h2>
+
+                <form method="POST" class="space-y-6">
+                    <div>
+                        <label
+                            class="block text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-4 ml-1">Destination
+                            Presets</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button type="button" onclick="fillUrl('http://localhost/')"
+                                class="py-2 px-3 bg-violet-500/5 hover:bg-violet-500/10 border border-violet-500/10 rounded-xl text-[10px] font-bold text-violet-300 transition-all">Node
+                                Loopback</button>
+                            <button type="button" onclick="fillUrl('http://169.254.169.254/latest/meta-data/')"
+                                class="py-2 px-3 bg-violet-500/5 hover:bg-violet-500/10 border border-violet-500/10 rounded-xl text-[10px] font-bold text-violet-300 transition-all">Orchestrator
+                                Meta</button>
+                            <button type="button" onclick="fillUrl('http://nebula-db:3306/')"
+                                class="py-2 px-3 bg-violet-500/5 hover:bg-violet-500/10 border border-violet-500/10 rounded-xl text-[10px] font-bold text-violet-300 transition-all">Relay
+                                DB</button>
+                            <button type="button" onclick="fillUrl('file:///etc/hosts')"
+                                class="py-2 px-3 bg-violet-500/5 hover:bg-violet-500/10 border border-violet-500/10 rounded-xl text-[10px] font-bold text-violet-300 transition-all">Local
+                                Mapping</button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label
+                            class="block text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-3 ml-1">Webhook
+                            Endpoint</label>
+                        <input type="text" id="urlInput" name="url" required
+                            class="w-full bg-slate-950 border border-violet-900/30 rounded-2xl p-4 text-sm font-bold text-white focus:outline-none focus:border-violet-500 focus:ring-4 focus:ring-violet-500/5 transition-all outline-none"
+                            placeholder="https://..." value="<?= htmlspecialchars($requestedUrl) ?>">
+                    </div>
+
+                    <button type="submit"
+                        class="w-full bg-violet-600 hover:bg-violet-500 py-4 rounded-2xl text-white font-black text-xs uppercase tracking-[0.2em] shadow-2xl shadow-violet-600/20 transition-all active:scale-[0.98]">
+                        Execute Webhook
+                    </button>
+                </form>
+
+                <?php if ($error): ?>
+                    <div
+                        class="mt-6 p-4 bg-rose-500/10 border border-rose-500/20 text-rose-400 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-3">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                        <?= $error ?>
+                    </div>
+                <?php endif; ?>
+            </div>
+
+            <div
+                class="p-4 rounded-2xl border border-slate-800/50 text-[10px] text-slate-600 leading-relaxed uppercase tracking-tighter">
+                Nebula Cloud employs a stateless proxy for all outgoing webhook requests. Execution logs are stored in
+                the orchestrator node for 7 days.
+            </div>
+        </div>
+
+        <!-- Output Column -->
+        <div class="lg:col-span-3">
+            <div class="glass rounded-[2rem] p-8 h-full flex flex-col glow-violet">
+                <div class="flex items-center justify-between mb-8">
+                    <h2 class="text-xs font-black text-violet-400 uppercase tracking-widest">Execution Output</h2>
+                    <div class="flex gap-2">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                        <span class="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Relay
+                            Ready</span>
+                    </div>
+                </div>
+
+                <?php if ($result || $responseHeaders): ?>
+                    <div class="space-y-6 flex-1 flex flex-col overflow-hidden">
+                        <div>
+                            <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">Response Headers
+                            </p>
+                            <div
+                                class="bg-black/40 p-4 rounded-xl border border-violet-900/20 font-mono text-[9px] text-violet-400/70 overflow-y-auto max-h-32">
+                                <?= nl2br(htmlspecialchars($responseHeaders)) ?>
+                            </div>
+                        </div>
+                        <div class="flex-1 flex flex-col overflow-hidden">
+                            <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">Payload Data</p>
+                            <div
+                                class="bg-black/40 p-5 rounded-xl border border-violet-900/20 font-mono text-[11px] text-blue-300/80 overflow-y-auto custom-scrollbar flex-1 leading-relaxed">
+                                <?= htmlspecialchars(mb_substr($result, 0, 5000)) ?>
+                                <?= (strlen($result) > 5000) ? "\n\n[...truncated " . strlen($result) . " bytes total...]" : '' ?>
+                            </div>
+                        </div>
+                    </div>
+                <?php else: ?>
+                    <div class="flex-1 flex flex-col items-center justify-center text-center opacity-30">
+                        <svg class="w-16 h-16 text-slate-800 mb-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                        <p class="text-sm font-bold text-slate-700 uppercase tracking-widest">Ready for Execution</p>
+                        <p class="text-[10px] text-slate-800 mt-2">Initialize a webhook destination for trace analysis.</p>
+                    </div>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+
     <script>
         function fillUrl(url) {
             document.getElementById('urlInput').value = url;
         }
     </script>
-</head>
+    <style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
 
-<body>
-    <div class="main-card">
-        <div class="logo">
-            <span>🌐</span>
-            <h1>WebFetcher Pro</h1>
-            <p>URL Preview & Screenshot Service — A10 Server-Side Request Forgery (SSRF) Lab</p>
-        </div>
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
 
-        <div class="vuln-badge">
-            <strong>⚠️ VULNERABILITY — A10 SSRF (Server-Side Request Forgery)</strong>
-            URL diakses langsung oleh server tanpa validasi — bisa akses internal services!
-        </div>
-
-        <form method="POST">
-            <label>URL yang ingin di-fetch</label>
-            <div class="quick-fill">
-                <button type="button" class="qf-btn" onclick="fillUrl('http://localhost/')">localhost</button>
-                <button type="button" class="qf-btn" onclick="fillUrl('http://127.0.0.1/')">127.0.0.1</button>
-                <button type="button" class="qf-btn" onclick="fillUrl('http://labsec-db:3306/')">Internal DB</button>
-                <button type="button" class="qf-btn" onclick="fillUrl('http://169.254.169.254/latest/meta-data/')">AWS
-                    Metadata</button>
-                <button type="button" class="qf-btn" onclick="fillUrl('file:///etc/passwd')">File Read</button>
-                <button type="button" class="qf-btn" onclick="fillUrl('http://labsec-db/')">labsec-db</button>
-            </div>
-            <input type="text" id="urlInput" name="url" placeholder="https://example.com atau http://localhost/admin"
-                value="<?= htmlspecialchars($requestedUrl) ?>">
-            <button type="submit" class="btn">🚀 Fetch URL</button>
-        </form>
-
-        <?php if ($error): ?>
-            <div class="error">❌
-                <?= htmlspecialchars($error) ?>
-            </div>
-        <?php endif; ?>
-
-        <?php if ($result || $responseHeaders): ?>
-            <div class="result-box">
-                <h3>📡 Response Headers dari:
-                    <?= htmlspecialchars($requestedUrl) ?>
-                </h3>
-                <div class="headers">
-                    <?= htmlspecialchars($responseHeaders) ?>
-                </div>
-                <h3>📄 Response Body</h3>
-                <div class="response">
-                    <?= htmlspecialchars(mb_substr($result, 0, 3000)) ?>
-                    <?= (strlen($result) > 3000) ? "\n\n[...truncated " . strlen($result) . " bytes total...]" : '' ?>
-                </div>
-            </div>
-        <?php endif; ?>
-    </div>
-
-    <div class="attack-panel">
-        <h3>🏹 SSRF Attack Scenarios — A10</h3>
-
-        <div class="scenario">
-            <h4>1. 🏠 Akses Internal Services</h4>
-            <ul>
-                <li><code>http://localhost/</code> — Apache loopback</li>
-                <li><code>http://127.0.0.1:80/</code> — Port scan</li>
-                <li><code>http://labsec-db:3306/</code> — Internal DB</li>
-                <li><code>http://labsec-dashboard/</code> — Dashboard internal</li>
-            </ul>
-        </div>
-
-        <div class="scenario">
-            <h4>2. ☁️ Cloud Metadata Exfiltration</h4>
-            <ul>
-                <li><code>http://169.254.169.254/latest/meta-data/</code></li>
-                <li><code>http://169.254.169.254/latest/meta-data/iam/security-credentials/</code></li>
-                <li><code>http://metadata.google.internal/computeMetadata/v1/</code></li>
-            </ul>
-        </div>
-
-        <div class="scenario">
-            <h4>3. 📁 Local File Read (file://)</h4>
-            <ul>
-                <li><code>file:///etc/passwd</code></li>
-                <li><code>file:///etc/hosts</code></li>
-                <li><code>file:///var/www/html/index.php</code> — Source code!</li>
-            </ul>
-        </div>
-
-        <div class="scenario">
-            <h4>4. 🔄 Bypass Filter via Redirect</h4>
-            <ul>
-                <li>Buat server redirect dari URL publik ke <code>http://internal/</code></li>
-                <li><code>http://attacker.com/redirect?to=http://localhost/admin</code></li>
-            </ul>
-        </div>
-
-        <div class="scenario">
-            <h4>5. 🔢 IP Encoding Bypass</h4>
-            <ul>
-                <li><code>http://0x7f000001/</code> — Hex: 127.0.0.1</li>
-                <li><code>http://2130706433/</code> — Decimal: 127.0.0.1</li>
-                <li><code>http://0177.0.0.1/</code> — Octal: 127.0.0.1</li>
-            </ul>
-        </div>
-    </div>
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #4c1d95;
+            border-radius: 10px;
+        }
+    </style>
 </body>
 
 </html>

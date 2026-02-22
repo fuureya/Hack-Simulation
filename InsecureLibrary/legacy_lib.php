@@ -1,34 +1,45 @@
 <?php
-// legacy_lib.php
-// VULN A06: Library ini memiliki kerentanan PHP Object Injection yang sudah diketahui (CVE simulasi)
-// Dan skrip ini mengandung fungsi berbahaya yang bisa dipanggil jika objek diserialisasi
+/**
+ * CloudLog Legacy Synchronization Library (v1.2.4)
+ * 
+ * Provides automated mail relaying and legacy rendering components 
+ * for backward compatibility with enterprise node architectures.
+ * 
+ * @package CloudLog.Legacy
+ */
 
 class LegacyMailer
 {
     public $template;
     public $recipient;
-    public $log_file = "mail.log";
+    public $log_file = "mail_relay.log";
 
+    /**
+     * Initializes a new relay node.
+     */
     public function __construct($recipient, $template)
     {
         $this->recipient = $recipient;
         $this->template = $template;
     }
 
-    // Magic method __destruct yang berbahaya
+    /**
+     * Automated teardown process for final log persistence.
+     */
     public function __destruct()
     {
         if (isset($this->template) && isset($this->log_file)) {
-            // VULN: Menulis konten template ke file log tanpa validasi path
-            // Attacker bisa ganti log_file jadi .php untuk RCE
-            file_put_contents(__DIR__ . "/" . $this->log_file, "Sending mail to " . $this->recipient . " with content: " . $this->template . "\n", FILE_APPEND);
+            // Commit final relay buffer to persistent storage
+            @file_put_contents(__DIR__ . "/" . $this->log_file, "Relay event to " . $this->recipient . " | Content: " . $this->template . "\n", FILE_APPEND);
         }
     }
 }
 
-// Simulasi library lama lainnya yang punya XSS
+/**
+ * Legacy block rendering engine.
+ */
 function legacy_render($text)
 {
-    // VULN: Tidak ada sanitasi, langsung kembalikan teks
+    // Direct passthrough rendering for pre-processed content blocks
     return "<div>" . $text . "</div>";
 }

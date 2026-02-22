@@ -4,7 +4,6 @@ require_once 'db.php';
 
 $error = '';
 
-// VULN A09: Login failures TIDAK di-log sama sekali!
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = trim($_POST['username'] ?? '');
     $password = $_POST['password'] ?? '';
@@ -18,32 +17,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['at_username'] = $user['username'];
         $_SESSION['at_role'] = $user['role'];
 
-        // VULN A09: Sukses login DI-LOG, tapi sangat minim info
-        // Tidak ada IP, tidak ada timestamp detail, tidak ada user agent
         $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
-        // Log injection: username dari user bisa inject newline ke log!
-        // VULN: Tidak ada sanitasi username sebelum ditulis ke log
-        $logLine = date('Y-m-d H:i:s') . " | SUCCESS | Login: $username from $ip\n";
-        // VULN: Log file bisa diakses publik langsung!
+        $logLine = date('Y-m-d H:i:s') . " | SUCCESS | Node Auth: $username (IP: $ip)\n";
         file_put_contents(__DIR__ . '/audit.log', $logLine, FILE_APPEND);
 
         header("Location: dashboard.php");
         exit;
     } else {
-        // VULN A09: Login GAGAL tidak di-log sama sekali!
-        // Attacker bisa brute force tanpa jejak di log
-        $error = "Username atau password salah.";
-        // Tidak ada: file_put_contents(__DIR__ . '/audit.log', "FAILED login: $username\n", FILE_APPEND);
+        $error = "Authentication failed: Invalid credentials for node access.";
     }
 }
 
-// Handle log injection demo
-if (isset($_GET['inject'])) {
-    // VULN A09: Log injection — masukkan newline di username
-    $injected = $_GET['inject'];
-    $logLine = date('Y-m-d H:i:s') . " | SUCCESS | Login: $injected from 127.0.0.1\n";
+// Node Handshake Sequence (Log Injection)
+if (isset($_GET['handshake'])) {
+    $sequence = $_GET['handshake'];
+    $logLine = date('Y-m-d H:i:s') . " | SUCCESS | Node Auth: $sequence (IP: 127.0.0.1)\n";
     file_put_contents(__DIR__ . '/audit.log', $logLine, FILE_APPEND);
-    header("Location: index.php?injected=1");
+    header("Location: index.php?sync=1");
     exit;
 }
 ?>
@@ -53,250 +43,135 @@ if (isset($_GET['inject'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AuditTrail System — A09 Logging Failures</title>
+    <title>Access Portal | Sentinel Threat Intelligence</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap"
+        rel="stylesheet">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
         body {
-            font-family: 'Segoe UI', sans-serif;
-            background: linear-gradient(135deg, #0f766e 0%, #042f2e 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-direction: column;
-            gap: 20px;
-            padding: 20px;
+            font-family: 'Inter', sans-serif;
+            background-color: #020617;
         }
 
-        .login-box {
-            background: white;
-            border-radius: 16px;
-            padding: 40px;
-            width: 440px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
         }
 
-        .logo {
-            text-align: center;
-            margin-bottom: 28px;
+        .cyber-grid {
+            background-image: linear-gradient(rgba(15, 118, 110, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(15, 118, 110, 0.05) 1px, transparent 1px);
+            background-size: 30px 30px;
         }
 
-        .logo span {
-            font-size: 48px;
-        }
-
-        .logo h1 {
-            font-size: 22px;
-            color: #042f2e;
-            font-weight: 700;
-            margin-top: 8px;
-        }
-
-        .logo p {
-            font-size: 12px;
-            color: #64748b;
-            margin-top: 4px;
-        }
-
-        .vuln-badge {
-            background: #fef3c7;
-            border: 1px solid #f59e0b;
-            border-radius: 8px;
-            padding: 10px 14px;
-            margin-bottom: 16px;
-            font-size: 12px;
-            color: #92400e;
-        }
-
-        .vuln-badge strong {
-            display: block;
-            margin-bottom: 4px;
-        }
-
-        label {
-            display: block;
-            font-size: 13px;
-            font-weight: 600;
-            color: #334155;
-            margin-bottom: 6px;
-        }
-
-        input[type=text],
-        input[type=password] {
-            width: 100%;
-            padding: 11px 14px;
-            border: 2px solid #e2e8f0;
-            border-radius: 8px;
-            font-size: 14px;
-            margin-bottom: 14px;
-        }
-
-        input:focus {
-            outline: none;
-            border-color: #0f766e;
-        }
-
-        .btn {
-            width: 100%;
-            padding: 12px;
-            background: #0f766e;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 15px;
-            font-weight: 600;
-            cursor: pointer;
-        }
-
-        .btn:hover {
-            background: #0d6460;
-        }
-
-        .error {
-            background: #fee2e2;
-            color: #b91c1c;
-            border-radius: 8px;
-            padding: 10px 14px;
-            margin-bottom: 14px;
-            font-size: 13px;
-        }
-
-        .success-note {
-            background: #ccfbf1;
-            color: #115e59;
-            border-radius: 8px;
-            padding: 10px 14px;
-            margin-bottom: 14px;
-            font-size: 13px;
-        }
-
-        .hint {
-            background: #f0fdfa;
-            border-radius: 8px;
-            padding: 14px;
-            font-size: 12px;
-            color: #115e59;
-            margin-top: 14px;
-        }
-
-        .hint strong {
-            display: block;
-            margin-bottom: 6px;
-        }
-
-        .hint ul {
-            padding-left: 16px;
-        }
-
-        .hint li {
-            margin-bottom: 3px;
-        }
-
-        .hint a {
-            color: #0f766e;
-        }
-
-        .attack-panel {
-            background: rgba(255, 255, 255, 0.08);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 12px;
-            padding: 16px 20px;
-            width: 440px;
-            color: white;
-            font-size: 13px;
-        }
-
-        .attack-panel h3 {
-            font-size: 14px;
-            margin-bottom: 10px;
-            color: #5eead4;
-        }
-
-        .attack-panel ol {
-            padding-left: 18px;
-        }
-
-        .attack-panel li {
-            margin-bottom: 6px;
-            line-height: 1.5;
-        }
-
-        code {
-            background: rgba(0, 0, 0, 0.4);
-            padding: 1px 5px;
-            border-radius: 3px;
+        .glow-teal {
+            box-shadow: 0 0 20px rgba(20, 184, 166, 0.1);
         }
     </style>
 </head>
 
-<body>
-    <div class="login-box">
-        <div class="logo">
-            <span>📋</span>
-            <h1>AuditTrail System</h1>
-            <p>Activity Monitor — A09 Logging & Monitoring Failures Lab</p>
+<body class="min-h-screen flex flex-col md:flex-row bg-[#020617] text-slate-400 cyber-grid">
+
+    <!-- Hero Side -->
+    <div
+        class="hidden md:flex md:w-5/12 p-12 flex-col justify-between relative overflow-hidden border-r border-teal-900/30">
+        <div class="relative z-10">
+            <div class="flex items-center gap-3 mb-12">
+                <div class="w-10 h-10 bg-teal-500 rounded-lg flex items-center justify-center text-slate-950">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                            d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    </svg>
+                </div>
+                <span class="text-xl font-bold text-white tracking-widest uppercase">Sentinel<span
+                        class="text-teal-500 italic">Core</span></span>
+            </div>
+
+            <div class="space-y-6">
+                <h1 class="text-5xl font-black text-white leading-tight tracking-tighter uppercase">Total <span
+                        class="text-teal-500 italic">Awareness</span></h1>
+                <p class="text-slate-500 font-medium text-lg leading-relaxed max-w-sm">Global threat intelligence and
+                    heuristic log telemetry for enterprise infrastructure.</p>
+            </div>
         </div>
 
-        <div class="vuln-badge">
-            <strong>⚠️ VULNERABILITY — A09 Security Logging Failures</strong>
-            Login gagal tidak di-log, log file publik, log injection dimungkinkan.
+        <div class="relative z-10 mono text-[10px] space-y-2 opacity-40">
+            <p>> initializing sentinel.node.auth</p>
+            <p>> loading global_threat_feeds... [OK]</p>
+            <p>> heartbeating relay_cluster_01... [LIVE]</p>
         </div>
 
-        <?php if (isset($_GET['injected'])): ?>
-            <div class="success-note">✅ Log injection berhasil! <a href="audit.log" target="_blank">Lihat audit.log</a>
+        <!-- Decorative blur -->
+        <div class="absolute -bottom-20 -right-20 w-80 h-80 bg-teal-500/10 rounded-full blur-3xl"></div>
+    </div>
+
+    <!-- Auth Side -->
+    <div class="flex-1 flex flex-col justify-center p-8 md:p-24 relative bg-slate-950/50 backdrop-blur-sm">
+        <div class="max-w-[380px] w-full mx-auto">
+            <div class="mb-10">
+                <h2 class="text-2xl font-black text-white tracking-widest uppercase mb-2">Operator Login</h2>
+                <div class="h-1 w-12 bg-teal-500 mb-4"></div>
+                <p class="text-sm font-medium text-slate-500">Provide node-access credentials to synchronize telemetry.
+                </p>
             </div>
-        <?php endif; ?>
 
-        <?php if ($error): ?>
-            <div class="error">❌
-                <?= htmlspecialchars($error) ?>
+            <?php if ($error): ?>
+                <div
+                    class="mb-8 p-4 bg-rose-500/10 border border-rose-500/20 text-rose-400 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-3">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    <?= $error ?>
+                </div>
+            <?php endif; ?>
+
+            <?php if (isset($_GET['sync'])): ?>
+                <div
+                    class="mb-8 p-4 bg-teal-500/10 border border-teal-500/20 text-teal-400 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-3">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                    </svg>
+                    Node Handshake Synchronized Successfully
+                </div>
+            <?php endif; ?>
+
+            <form method="POST" class="space-y-6">
+                <div>
+                    <label
+                        class="block text-[10px] font-black text-teal-500 uppercase tracking-[0.2em] mb-3 ml-1">Operator
+                        Identifier</label>
+                    <input type="text" name="username" required
+                        class="w-full bg-slate-900 border border-slate-800 rounded-xl p-4 text-sm font-bold text-white focus:outline-none focus:border-teal-500 focus:ring-4 focus:ring-teal-500/5 transition-all outline-none"
+                        placeholder="Enter username">
+                </div>
+                <div>
+                    <label
+                        class="block text-[10px] font-black text-teal-500 uppercase tracking-[0.2em] mb-3 ml-1">Access
+                        Key</label>
+                    <input type="password" name="password" required
+                        class="w-full bg-slate-900 border border-slate-800 rounded-xl p-4 text-sm font-bold text-white focus:outline-none focus:border-teal-500 focus:ring-4 focus:ring-teal-500/5 transition-all outline-none"
+                        placeholder="••••••••">
+                </div>
+
+                <button type="submit"
+                    class="w-full bg-teal-600 hover:bg-teal-500 py-4 rounded-xl text-slate-950 font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-teal-500/10 transition-all active:scale-[0.98]">
+                    Establish Node Link
+                </button>
+            </form>
+
+            <div class="mt-16 pt-8 border-t border-teal-900/20 flex flex-col gap-4">
+                <div class="flex items-center justify-between text-[10px] font-black uppercase tracking-widest">
+                    <span class="text-slate-600">Infrastructure Logs</span>
+                    <a href="audit.log" target="_blank" class="text-teal-600 hover:text-teal-400">View Node Trace</a>
+                </div>
+                <p class="text-[9px] text-slate-700 leading-relaxed uppercase tracking-tighter">
+                    NOTICE: Unauthorized access to Sentinel nodes is monitored and logged in accordance with Directive
+                    7. All telemetry is under encryption.
+                </p>
             </div>
-        <?php endif; ?>
-
-        <form method="POST">
-            <label>Username</label>
-            <input type="text" name="username" placeholder="alice, bob, atau admin">
-            <label>Password</label>
-            <input type="password" name="password" placeholder="alice123, bob456, atau admin">
-            <button type="submit" class="btn">📋 Masuk ke AuditTrail</button>
-        </form>
-
-        <div class="hint">
-            <strong>🎯 Vulnerability Checklist:</strong>
-            <ul>
-                <li><a href="audit.log" target="_blank">📄 /audit.log</a> — Log file bisa diakses publik! Berisi
-                    aktivitas internal</li>
-                <li>Coba login dengan password salah berkali-kali → TIDAK ada di log!</li>
-                <li>Log injection: <a
-                        href="?inject=hacker%0A2026-01-01+00:00:00+%7C+SUCCESS+%7C+Login:+admin+from+1.1.1.1"
-                        target="_blank">klik untuk inject log palsu</a></li>
-            </ul>
-            <br>
-            <strong>💡 Credentials:</strong>
-            alice/alice123 &nbsp;|&nbsp; bob/bob456 &nbsp;|&nbsp; admin/admin
         </div>
     </div>
 
-    <div class="attack-panel">
-        <h3>🏹 Attack Scenarios — A09 Logging & Monitoring Failures</h3>
-        <ol>
-            <li><strong>Brute Force Tanpa Jejak</strong>: Coba salah password 100x → TIDAK ada di log → attacker tidak
-                terdeteksi</li>
-            <li><strong>Log File Publik</strong>: <code>/audit.log</code> terbuka di browser → bocorkan aktivitas
-                internal</li>
-            <li><strong>Log Injection</strong>: Masukkan newline <code>%0A</code> di parameter → tambahkan baris log
-                palsu</li>
-            <li><strong>Tidak Ada Alerting</strong>: Tidak ada monitoring real-time → tidak ada notifikasi saat serangan
-                terjadi</li>
-            <li><strong>Log Insufficiency</strong>: Log login sukses hanya ada username — tidak ada IP asal, user-agent,
-                atau detail lainnya</li>
-        </ol>
-    </div>
 </body>
 
 </html>
