@@ -15,6 +15,9 @@ RUN apt-get update && apt-get install -y \
     && docker-php-ext-install pdo_mysql \
     && rm -rf /var/lib/apt/lists/*
 
+# Set Docker config directory to a writable location
+ENV DOCKER_CONFIG=/tmp/.docker
+
 # Enable Apache mod_rewrite
 RUN a2enmod rewrite
 
@@ -25,7 +28,11 @@ COPY . /var/www/html/
 RUN chown -R www-data:www-data /var/www/html && \
     chmod -R 755 /var/www/html
 
-# Create docker group with GID 128 (same as host) and add www-data to it
-RUN groupadd -g 128 docker && usermod -aG docker www-data
+# Create docker group with correct GID and add www-data to it
+# GID 134 matches current host, but chmod 666 in init-setup.sh makes it universal
+RUN groupadd -g 134 docker || true && usermod -aG docker www-data
+
+# Ensure www-data can write to its home directory if needed
+RUN chown www-data:www-data /var/www
 
 EXPOSE 80
