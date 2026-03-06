@@ -302,15 +302,19 @@ $labs = [
                         <p class="text-sm font-medium text-slate-500 mb-8 leading-relaxed h-12 overflow-hidden">
                             <?= $lab['description'] ?></p>
 
-                        <div class="flex gap-4">
+                        <div class="grid grid-cols-2 gap-4">
                             <button onclick="startLab('<?= $lab['id'] ?>')" id="start-<?= $lab['id'] ?>"
-                                class="flex-1 bg-<?= $lab['color'] ?>-700 text-white font-black py-4 rounded-2xl text-xs hover:bg-<?= $lab['color'] ?>-800 transition-all shadow-lg shadow-<?= $lab['color'] ?>-200 flex items-center justify-center gap-2">
+                                class="bg-<?= $lab['color'] ?>-700 text-white font-black py-4 rounded-2xl text-xs hover:bg-<?= $lab['color'] ?>-800 transition-all shadow-lg shadow-<?= $lab['color'] ?>-200 flex items-center justify-center gap-2">
                                 <div id="start-inner-<?= $lab['id'] ?>" class="flex items-center gap-2">
                                     <span>Start Lab</span>
                                 </div>
                             </button>
+                            <button onclick="stopLab('<?= $lab['id'] ?>')" id="stop-<?= $lab['id'] ?>"
+                                class="bg-rose-600 text-white font-black py-4 rounded-2xl text-xs hover:bg-rose-700 transition-all shadow-lg shadow-rose-200 flex items-center justify-center gap-2 opacity-50 pointer-events-none">
+                                <span>Stop Lab</span>
+                            </button>
                             <a href="lab_detail.php?id=<?= $lab['id'] ?>" 
-                                class="flex-1 bg-slate-900 text-white font-black py-4 rounded-2xl text-xs hover:bg-black transition-all flex items-center justify-center gap-2 shadow-lg shadow-slate-200">
+                                class="col-span-2 bg-slate-900 text-white font-black py-4 rounded-2xl text-xs hover:bg-black transition-all flex items-center justify-center gap-2 shadow-lg shadow-slate-200">
                                 <span>CTF Lab</span>
                             </a>
                         </div>
@@ -351,21 +355,30 @@ $labs = [
             const statusEl = document.getElementById(`status-${labId}`);
             const startBtn = document.getElementById(`start-${labId}`);
             const startInner = document.getElementById(`start-inner-${labId}`);
+            const stopBtn = document.getElementById(`stop-${labId}`);
             const link = document.getElementById(`link-${labId}`);
 
             if (status === 'running') {
                 statusEl.innerHTML = '<div class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div><span class="text-[10px] font-black uppercase tracking-widest text-emerald-600">Running</span>';
                 startBtn.classList.add('opacity-50', 'pointer-events-none');
                 startInner.innerHTML = '<span>Active</span>';
+                stopBtn.classList.remove('opacity-50', 'pointer-events-none');
                 link.classList.remove('hidden');
             } else if (status === 'processing' || processing.has(labId)) {
                 statusEl.innerHTML = '<div class="loader"></div><span class="text-[10px] font-black uppercase tracking-widest text-blue-600">Building...</span>';
                 startBtn.classList.add('opacity-50', 'pointer-events-none');
+                stopBtn.classList.add('opacity-50', 'pointer-events-none');
+                link.classList.add('hidden');
+            } else if (status === 'stopping') {
+                statusEl.innerHTML = '<div class="loader"></div><span class="text-[10px] font-black uppercase tracking-widest text-rose-600">Stopping...</span>';
+                startBtn.classList.add('opacity-50', 'pointer-events-none');
+                stopBtn.classList.add('opacity-50', 'pointer-events-none');
                 link.classList.add('hidden');
             } else {
                 statusEl.innerHTML = '<div class="w-2 h-2 bg-slate-300 rounded-full"></div><span class="text-[10px] font-black uppercase tracking-widest text-slate-400">Stopped</span>';
                 startBtn.classList.remove('opacity-50', 'pointer-events-none');
                 startInner.innerHTML = '<span>Start Lab</span>';
+                stopBtn.classList.add('opacity-50', 'pointer-events-none');
                 link.classList.add('hidden');
             }
         }
@@ -375,7 +388,6 @@ $labs = [
             processing.add(labId);
             updateUI(labId, 'processing');
 
-            let logs = [];
             let progress = 0;
 
             const modal = Swal.fire({
@@ -427,8 +439,8 @@ $labs = [
                                     icon: 'success',
                                     title: 'Lab Deployed!',
                                     text: data.msg,
-                                    timer: 2000,
-                                    showConfirmButton: false,
+                                    confirmButtonText: 'Mulai Simulasi',
+                                    confirmButtonColor: '#4f46e5',
                                     customClass: { popup: 'rounded-3xl' }
                                 });
                                 checkStatus();
@@ -479,9 +491,21 @@ $labs = [
                 const response = await fetch(`api.php?action=stop&container=${lab.container}`);
                 const data = await response.json();
                 if (data.success) {
-                    Swal.fire({ icon: 'info', title: 'Lab Offline', timer: 1500, showConfirmButton: false, customClass: { popup: 'rounded-3xl' } });
+                    Swal.fire({ 
+                        icon: 'info', 
+                        title: 'Lab Offline', 
+                        text: 'Security simulation has been terminated.',
+                        confirmButtonText: 'Selesai',
+                        confirmButtonColor: '#f43f5e',
+                        customClass: { popup: 'rounded-3xl' } 
+                    });
                 } else {
-                    Swal.fire({ icon: 'error', title: 'Error', text: 'Gagal menghentikan lab.', customClass: { popup: 'rounded-3xl' } });
+                    Swal.fire({ 
+                        icon: 'error', 
+                        title: 'Termination Failed', 
+                        text: 'Gagal menghentikan lab: ' + (data.message || 'Unknown error'), 
+                        customClass: { popup: 'rounded-3xl' } 
+                    });
                 }
             } catch (error) {
                 Swal.fire('Error', 'Koneksi API bermasalah.', 'error');
