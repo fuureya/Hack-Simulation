@@ -180,19 +180,31 @@ switch ($action) {
         
         if (trim($checkResult['output']) === $container) {
             sendEvent(['msg' => "Container exists. Starting..."]);
-            $handle = popen("docker start $container 2>&1", 'r');
-            while (!feof($handle)) {
-                $line = fgets($handle);
-                if ($line) sendEvent(['msg' => trim($line)]);
-            }
-            pclose($handle);
-            sendEvent(['status' => 'done', 'msg' => 'Container started successfully!'], 'result');
-        } else {
-            sendEvent(['msg' => "Container doesn't exist. Preparing build..."]);
             
-            // Check image
-            $imageCheck = execDocker("docker images -q {$config['image']}");
-            if (empty(trim($imageCheck['output']))) {
+            // Try starting
+            $tempOutput = [];
+            $tempCode = 0;
+            exec("docker start $container 2>&1", $tempOutput, $tempCode);
+            $outputStr = implode("\n", $tempOutput);
+
+            if ($tempCode === 0) {
+                sendEvent(['msg' => "Container started successfully!"]);
+                sendEvent(['status' => 'done', 'msg' => 'Container started successfully!'], 'result');
+                exit;
+            } else {
+                sendEvent(['msg' => "Failed to start existing container: $outputStr", 'level' => 'warn']);
+                sendEvent(['msg' => "Removing stale container and recreating..."]);
+                execDocker("docker rm -f $container");
+                // Continue to the creation logic below...
+            }
+        }
+
+        // 2. Either container didn't exist or was removed due to error
+        sendEvent(['msg' => "Preparing deployment..."]);
+        
+        // Check image
+        $imageCheck = execDocker("docker images -q {$config['image']}");
+        if (empty(trim($imageCheck['output']))) {
                 sendEvent(['msg' => "Image {$config['image']} not found. Building..."]);
                 $buildCmd = "cd {$config['path']} && docker build -t {$config['image']} .";
                 $handle = popen("$buildCmd 2>&1", 'r');
@@ -238,7 +250,6 @@ switch ($action) {
             }
             pclose($handle);
             sendEvent(['status' => 'done', 'msg' => 'Lab deployed successfully!'], 'result');
-        }
         exit;
         break;
 
