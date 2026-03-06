@@ -257,26 +257,32 @@ $labs = [
                             </div>
                         </div>
 
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-600 text-[8px] font-black uppercase tracking-widest border border-emerald-100">Easy</span>
+                            <span class="px-2 py-0.5 rounded-md bg-orange-50 text-orange-600 text-[8px] font-black uppercase tracking-widest border border-orange-100">Med</span>
+                            <span class="px-2 py-0.5 rounded-md bg-rose-50 text-rose-600 text-[8px] font-black uppercase tracking-widest border border-rose-100">Hard</span>
+                        </div>
+
                         <h3 class="text-2xl font-black text-slate-900 mb-3 tracking-tight"><?= $lab['name'] ?></h3>
                         <p class="text-sm font-medium text-slate-500 mb-8 leading-relaxed h-12 overflow-hidden">
                             <?= $lab['description'] ?></p>
 
                         <div class="flex gap-4">
                             <button onclick="startLab('<?= $lab['id'] ?>')" id="start-<?= $lab['id'] ?>"
-                                class="flex-1 bg-<?= $lab['color'] ?>-600 text-white font-black py-4 rounded-2xl text-sm hover:bg-<?= $lab['color'] ?>-700 transition-all shadow-lg shadow-<?= $lab['color'] ?>-200 flex items-center justify-center gap-2">
+                                class="flex-1 bg-<?= $lab['color'] ?>-700 text-white font-black py-4 rounded-2xl text-xs hover:bg-<?= $lab['color'] ?>-800 transition-all shadow-lg shadow-<?= $lab['color'] ?>-200 flex items-center justify-center gap-2">
                                 <div id="start-inner-<?= $lab['id'] ?>" class="flex items-center gap-2">
                                     <span>Start Lab</span>
                                 </div>
                             </button>
-                            <button onclick="stopLab('<?= $lab['id'] ?>')" id="stop-<?= $lab['id'] ?>"
-                                class="flex-1 bg-slate-100 text-slate-600 font-black py-4 rounded-2xl text-sm hover:bg-slate-200 transition-all flex items-center justify-center gap-2">
-                                <span id="stop-inner-<?= $lab['id'] ?>">Stop</span>
-                            </button>
+                            <a href="lab_detail.php?id=<?= $lab['id'] ?>" 
+                                class="flex-1 bg-slate-900 text-white font-black py-4 rounded-2xl text-xs hover:bg-black transition-all flex items-center justify-center gap-2 shadow-lg shadow-slate-200">
+                                <span>CTF Lab</span>
+                            </a>
                         </div>
 
                         <a href="http://localhost:<?= $lab['port'] ?>" target="_blank" id="link-<?= $lab['id'] ?>"
                             class="hidden mt-4 text-center bg-indigo-50 text-indigo-700 font-black py-4 rounded-2xl text-sm border-2 border-indigo-100 hover:bg-indigo-100 hover:border-indigo-200 transition-all flex items-center justify-center gap-3">
-                            <span>Buka Simulation</span>
+                            <span>Open Simulation</span>
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
                                     d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
