@@ -11,16 +11,38 @@ if (!$lab_id) {
     exit;
 }
 
-// Find lab config from dashboard data (simulated for now)
+// Find lab config from dashboard data
 $labs = [
     'csrf' => ['name' => 'CSRF Attack Lab', 'OWASP' => 'A08', 'port' => 8888, 'color' => 'blue'],
     'xss' => ['name' => 'XSS Attack Lab', 'OWASP' => 'A03', 'port' => 8001, 'color' => 'purple'],
     'sqli' => ['name' => 'SQL Injection Lab', 'OWASP' => 'A03', 'port' => 8002, 'color' => 'emerald'],
     'authfail' => ['name' => 'Auth Failures Lab', 'OWASP' => 'A07', 'port' => 8006, 'color' => 'violet'],
-    // ... add more as needed
+    'bac' => ['name' => 'Broken Access Control', 'OWASP' => 'A01', 'port' => 8009, 'color' => 'rose'],
+    'idor' => ['name' => 'IDOR Attack Lab', 'OWASP' => 'A01', 'port' => 8010, 'color' => 'indigo'],
+    'cryptofail' => ['name' => 'Crypto Failures Lab', 'OWASP' => 'A02', 'port' => 8003, 'color' => 'yellow'],
+    'insecuredesign' => ['name' => 'Insecure Design Lab', 'OWASP' => 'A04', 'port' => 8004, 'color' => 'green'],
+    'secmisconfig' => ['name' => 'Security Misconfig Lab', 'OWASP' => 'A05', 'port' => 8005, 'color' => 'gray'],
+    'loggingfail' => ['name' => 'Logging Failures Lab', 'OWASP' => 'A09', 'port' => 8007, 'color' => 'teal'],
+    'ssrf' => ['name' => 'SSRF Lab', 'OWASP' => 'A10', 'port' => 8008, 'color' => 'pink'],
+    'insecurelibrary' => ['name' => 'Insecure Component Lab', 'OWASP' => 'A06', 'port' => 8011, 'color' => 'orange'],
+    'integrityfail' => ['name' => 'Integrity Failure Lab', 'OWASP' => 'A08', 'port' => 8012, 'color' => 'cyan'],
 ];
 
 $lab = $labs[$lab_id] ?? ['name' => 'Unknown Lab', 'OWASP' => 'N/A', 'port' => 0, 'color' => 'gray'];
+
+// Fetch challenges for this lab directly from DB
+$host = 'labsec-db';
+$db_name   = 'labsec_ctf';
+$user = 'root';
+$pass = 'labsec_root_2026';
+try {
+    $pdo = new PDO("mysql:host=$host;dbname=$db_name;charset=utf8mb4", $user, $pass);
+    $stmt = $pdo->prepare("SELECT level, title, description, hint FROM challenges WHERE lab_id = ?");
+    $stmt->execute([$lab_id]);
+    $challenges_db = $stmt->fetchAll(PDO::FETCH_GROUP|PDO::FETCH_UNIQUE);
+} catch (PDOException $e) {
+    $challenges_db = [];
+}
 ?>
 
 <!DOCTYPE html>
@@ -68,7 +90,9 @@ $lab = $labs[$lab_id] ?? ['name' => 'Unknown Lab', 'OWASP' => 'N/A', 'port' => 0
             <div class="lg:col-span-2 space-y-8">
                 <h2 class="text-2xl font-black text-slate-900 tracking-tight">Available Challenges</h2>
                 
-                <?php foreach (['easy', 'medium', 'hard'] as $level): ?>
+                <?php foreach (['easy', 'medium', 'hard'] as $level): 
+                    $c = $challenges_db[$level] ?? ['title' => 'N/A', 'description' => 'Challenge not loaded.', 'hint' => 'No hint.'];
+                ?>
                 <div class="challenge-card bg-white rounded-[2.5rem] p-8 shadow-xl border border-slate-100 flex items-start gap-8">
                     <div class="w-16 h-16 rounded-2xl bg-<?= $level === 'easy' ? 'emerald' : ($level === 'medium' ? 'orange' : 'rose') ?>-50 flex items-center justify-center shrink-0">
                         <svg class="w-8 h-8 text-<?= $level === 'easy' ? 'emerald' : ($level === 'medium' ? 'orange' : 'rose') ?>-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -77,13 +101,27 @@ $lab = $labs[$lab_id] ?? ['name' => 'Unknown Lab', 'OWASP' => 'N/A', 'port' => 0
                     </div>
                     <div class="flex-1">
                         <div class="flex items-center justify-between mb-2">
-                            <h3 class="text-xl font-black text-slate-900 uppercase tracking-tight"><?= ucfirst($level) ?> Challenge</h3>
+                            <div class="flex items-center gap-3">
+                                <h3 class="text-xl font-black text-slate-900 uppercase tracking-tight"><?= ucfirst($level) ?></h3>
+                                <div class="h-1 w-1 bg-slate-300 rounded-full"></div>
+                                <span class="text-sm font-bold text-slate-400"><?= htmlspecialchars($c['title']) ?></span>
+                            </div>
                             <span id="badge-<?= $level ?>" class="hidden px-4 py-1.5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-black uppercase tracking-widest">Completed</span>
                         </div>
-                        <p id="desc-<?= $level ?>" class="text-slate-500 font-medium text-sm leading-relaxed mb-6">Loading challenge description...</p>
+                        <p class="text-slate-500 font-medium text-sm leading-relaxed mb-6"><?= htmlspecialchars($c['description']) ?></p>
                         
+                        <div class="mb-6 hidden" id="hint-box-<?= $level ?>">
+                            <div class="p-4 bg-orange-50 border border-orange-100 rounded-2xl text-xs font-bold text-orange-700 flex items-start gap-3">
+                                <svg class="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <span>Hint: <?= htmlspecialchars($c['hint']) ?></span>
+                            </div>
+                        </div>
+
                         <div class="flex items-center gap-4">
                             <input type="text" id="flag-<?= $level ?>" class="flex-1 bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 text-sm font-semibold focus:outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all" placeholder="FLAG{...}">
+                            <button onclick="showHint('<?= $level ?>')" class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold px-6 py-4 rounded-2xl text-sm transition-all">Hint</button>
                             <button onclick="submitFlag('<?= $level ?>')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-8 py-4 rounded-2xl text-sm transition-all shadow-lg shadow-indigo-200 active:scale-95">Submit</button>
                         </div>
                     </div>
@@ -124,35 +162,6 @@ $lab = $labs[$lab_id] ?? ['name' => 'Unknown Lab', 'OWASP' => 'N/A', 'port' => 0
     <script>
         const labId = '<?= $lab_id ?>';
         
-        async function loadChallenges() {
-            // Simulated fetch for challenge descriptions (can be from API later)
-            const challenges = {
-                'authfail': {
-                    'easy': 'Session Fixation: Gunakan parameter PHPSESSID di URL untuk membajak sesi user lainnya.',
-                    'medium': 'Remember Me bypass: Manipulasi cookie "remember_me" yang menggunakan encoding lemah.',
-                    'hard': 'Admin Login: Lakukan brute-force atau gunakan kredensial default untuk masuk sebagai admin.'
-                },
-                'sqli': {
-                    'easy': 'Auth Bypass: Masuk ke sistem tanpa password menggunakan payload SQLi klasik.',
-                    'medium': 'Union Select: Keluarkan semua data dari tabel sensitif (misal: billing atau users).',
-                    'hard': 'Blind SQLi: Tebak versi database atau nama tabel menggunakan teknik time-based.'
-                },
-                'xss': {
-                    'easy': 'Reflected XSS: Jalankan script alert() melalui kolom pencarian atau input non-persistent.',
-                    'medium': 'Stored XSS: Masukkan script ke database (misal: review film) yang akan tereksekusi di sisi admin.',
-                    'hard': 'Cookie Stealing: Gunakan XSS untuk mengambil session cookie admin dan kirimkan ke server penyerang.'
-                }
-            };
-
-            const data = challenges[labId] || { 'easy': 'Description not available.', 'medium': 'Description not available.', 'hard': 'Description not available.' };
-            
-            for (const level of ['easy', 'medium', 'hard']) {
-                document.getElementById(`desc-${level}`).innerText = data[level];
-            }
-            
-            checkStatus();
-        }
-
         async function checkStatus() {
             try {
                 const response = await fetch(`api_ctf.php?action=status&lab_id=${labId}`);
@@ -169,8 +178,14 @@ $lab = $labs[$lab_id] ?? ['name' => 'Unknown Lab', 'OWASP' => 'N/A', 'port' => 0
             }
         }
 
+        function showHint(level) {
+            const hintBox = document.getElementById(`hint-box-${level}`);
+            hintBox.classList.toggle('hidden');
+        }
+
         async function submitFlag(level) {
-            const flag = document.getElementById(`flag-${level}`).value;
+            const flagInput = document.getElementById(`flag-${level}`);
+            const flag = flagInput.value.trim();
             if (!flag) return Swal.fire('Oops!', 'Masukkan flag terlebih dahulu.', 'warning');
 
             const formData = new FormData();
@@ -192,16 +207,16 @@ $lab = $labs[$lab_id] ?? ['name' => 'Unknown Lab', 'OWASP' => 'N/A', 'port' => 0
                         text: result.message,
                         timer: 2000,
                         showConfirmButton: false,
-                        customClass: { popup: 'rounded-3xl' }
+                        customClass: { popup: 'rounded-[2rem]' }
                     });
                     document.getElementById(`badge-${level}`).classList.remove('hidden');
-                    document.getElementById(`flag-${level}`).value = '';
+                    flagInput.value = '';
                 } else {
                     Swal.fire({
                         icon: 'error',
-                        title: 'Wrong Flag',
+                        title: 'Salah!',
                         text: result.message,
-                        customClass: { popup: 'rounded-3xl' }
+                        customClass: { popup: 'rounded-[2rem]' }
                     });
                 }
             } catch (error) {
@@ -209,7 +224,7 @@ $lab = $labs[$lab_id] ?? ['name' => 'Unknown Lab', 'OWASP' => 'N/A', 'port' => 0
             }
         }
 
-        loadChallenges();
+        checkStatus();
     </script>
 </body>
 </html>
