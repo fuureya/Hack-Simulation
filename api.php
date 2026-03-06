@@ -151,71 +151,6 @@ switch ($action) {
         ]);
         break;
 
-    case 'start':
-        $config = $labConfig[$container];
-
-        // Check if container exists
-        $checkResult = execDocker("docker ps -a --filter name=$container --format '{{.Names}}'");
-
-        if (trim($checkResult['output']) === $container) {
-            // Container exists, just start it
-            $result = execDocker("docker start $container");
-        } else {
-            // Container doesn't exist, need to create it
-            // First, check if image exists, if not build it
-            $imageCheck = execDocker("docker images -q {$config['image']}");
-
-            if (empty(trim($imageCheck['output']))) {
-                // Build image first
-                $buildCmd = "cd {$config['path']} && docker build -t {$config['image']} .";
-                $buildResult = execDocker($buildCmd);
-
-                if ($buildResult['code'] !== 0) {
-                    echo json_encode([
-                        'success' => false,
-                        'message' => 'Failed to build image',
-                        'debug' => $buildResult
-                    ]);
-                    exit;
-                }
-            }
-
-            // Environment variables string to flags
-            $envFlags = "";
-            if (isset($config['env']) && !empty($config['env'])) {
-                $envs = explode(" ", $config['env']);
-                foreach ($envs as $env) {
-                    $envFlags .= "-e " . escapeshellarg($env) . " ";
-                }
-            }
-
-            // Run container
-            $runCmd = "docker run -d --name $container " .
-                $envFlags .
-                "-p {$config['port']} " .
-                "--network {$config['network']} " .
-                "--restart unless-stopped " .
-                "{$config['image']}";
-
-            $result = execDocker($runCmd);
-
-            if ($result['code'] !== 0) {
-                echo json_encode([
-                    'success' => false,
-                    'message' => 'Failed to run container: ' . $result['output'],
-                    'debug' => $result
-                ]);
-                exit;
-            }
-        }
-
-        echo json_encode([
-            'success' => true,
-            'message' => 'Container started successfully',
-            'debug' => isset($result) ? $result : ['status' => 'already_running']
-        ]);
-        break;
-
     case 'stop':
         $result = execDocker("docker stop $container");
         echo json_encode([
@@ -223,6 +158,88 @@ switch ($action) {
             'message' => $result['output'],
             'debug' => $result
         ]);
+        break;
+
+    case 'stream':
+        header('Content-Type: text/event-stream');
+        header('Cache-Control: no-cache');
+        header('Connection: keep-alive');
+        
+        function sendEvent($data, $event = 'log') {
+            echo "event: $event\n";
+            echo "data: " . json_encode($data) . "\n\n";
+            ob_flush();
+            flush();
+        }
+
+        $config = $labConfig[$container];
+        
+        // 1. Check if container exists
+        sendEvent(['msg' => "Checking container status for $container..."]);
+        $checkResult = execDocker("docker ps -a --filter name=$container --format '{{.Names}}'");
+        
+        if (trim($checkResult['output']) === $container) {
+            sendEvent(['msg' => "Container exists. Starting..."]);
+            $handle = popen("docker start $container 2>&1", 'r');
+            while (!feof($handle)) {
+                $line = fgets($handle);
+                if ($line) sendEvent(['msg' => trim($line)]);
+            }
+            pclose($handle);
+            sendEvent(['status' => 'done', 'msg' => 'Container started successfully!'], 'result');
+        } else {
+            sendEvent(['msg' => "Container doesn't exist. Preparing build..."]);
+            
+            // Check image
+            $imageCheck = execDocker("docker images -q {$config['image']}");
+            if (empty(trim($imageCheck['output']))) {
+                sendEvent(['msg' => "Image {$config['image']} not found. Building..."]);
+                $buildCmd = "cd {$config['path']} && docker build -t {$config['image']} .";
+                $handle = popen("$buildCmd 2>&1", 'r');
+                while (!feof($handle)) {
+                    $line = fgets($handle);
+                    if ($line) {
+                        // Attempt to parse "Step X/Y" for progress
+                        if (preg_match('/Step (\d+)\/(\d+)/', $line, $matches)) {
+                            $progress = round(($matches[1] / $matches[2]) * 100);
+                            sendEvent(['progress' => $progress, 'msg' => trim($line)], 'progress');
+                        } else {
+                            sendEvent(['msg' => trim($line)]);
+                        }
+                    }
+                }
+                $exitCode = pclose($handle);
+                if ($exitCode !== 0) {
+                    sendEvent(['status' => 'error', 'msg' => 'Build failed!'], 'result');
+                    exit;
+                }
+            }
+            
+            sendEvent(['msg' => "Running new container..."]);
+            $envFlags = "";
+            if (isset($config['env']) && !empty($config['env'])) {
+                $envs = explode(" ", $config['env']);
+                foreach ($envs as $env) {
+                    $envFlags .= "-e " . escapeshellarg($env) . " ";
+                }
+            }
+            
+            $runCmd = "docker run -d --name $container " .
+                $envFlags .
+                "-p {$config['port']} " .
+                "--network {$config['network']} " .
+                "--restart unless-stopped " .
+                "{$config['image']}";
+            
+            $handle = popen("$runCmd 2>&1", 'r');
+            while (!feof($handle)) {
+                $line = fgets($handle);
+                if ($line) sendEvent(['msg' => trim($line)]);
+            }
+            pclose($handle);
+            sendEvent(['status' => 'done', 'msg' => 'Lab deployed successfully!'], 'result');
+        }
+        exit;
         break;
 
     default:

@@ -174,6 +174,41 @@ $labs = [
             background: rgba(255, 255, 255, 0.1);
             border: 1px solid rgba(255, 255, 255, 0.2);
         }
+
+        .terminal-bg {
+            background-color: #0f172a;
+            color: #38bdf8;
+            font-family: 'Fira Code', 'Cascadia Code', monospace;
+            padding: 1.5rem;
+            border-radius: 1rem;
+            max-height: 300px;
+            overflow-y: auto;
+            font-size: 0.75rem;
+            line-height: 1.5;
+            text-align: left;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .terminal-line { margin-bottom: 4px; border-left: 2px solid transparent; padding-left: 8px; }
+        .terminal-line.success { border-left-color: #10b981; color: #10b981; }
+        .terminal-line.error { border-left-color: #f43f5e; color: #f43f5e; }
+        .terminal-line.info { border-left-color: #3b82f6; color: #3b82f6; }
+
+        .progress-bar-container {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 1rem;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #3b82f6, #38bdf8);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
     </style>
 </head>
 
@@ -316,81 +351,116 @@ $labs = [
             const statusEl = document.getElementById(`status-${labId}`);
             const startBtn = document.getElementById(`start-${labId}`);
             const startInner = document.getElementById(`start-inner-${labId}`);
-            const stopBtn = document.getElementById(`stop-${labId}`);
             const link = document.getElementById(`link-${labId}`);
 
             if (status === 'running') {
                 statusEl.innerHTML = '<div class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div><span class="text-[10px] font-black uppercase tracking-widest text-emerald-600">Running</span>';
                 startBtn.classList.add('opacity-50', 'pointer-events-none');
                 startInner.innerHTML = '<span>Active</span>';
-                stopBtn.classList.remove('opacity-50', 'pointer-events-none');
                 link.classList.remove('hidden');
-            } else if (status === 'processing') {
+            } else if (status === 'processing' || processing.has(labId)) {
                 statusEl.innerHTML = '<div class="loader"></div><span class="text-[10px] font-black uppercase tracking-widest text-blue-600">Building...</span>';
                 startBtn.classList.add('opacity-50', 'pointer-events-none');
-                stopBtn.classList.add('opacity-50', 'pointer-events-none');
-                link.classList.add('hidden');
-            } else if (status === 'stopping') {
-                statusEl.innerHTML = '<div class="loader"></div><span class="text-[10px] font-black uppercase tracking-widest text-rose-600">Stopping...</span>';
-                startBtn.classList.add('opacity-50', 'pointer-events-none');
-                stopBtn.classList.add('opacity-50', 'pointer-events-none');
                 link.classList.add('hidden');
             } else {
                 statusEl.innerHTML = '<div class="w-2 h-2 bg-slate-300 rounded-full"></div><span class="text-[10px] font-black uppercase tracking-widest text-slate-400">Stopped</span>';
                 startBtn.classList.remove('opacity-50', 'pointer-events-none');
                 startInner.innerHTML = '<span>Start Lab</span>';
-                stopBtn.classList.add('opacity-50', 'pointer-events-none');
                 link.classList.add('hidden');
             }
         }
 
-        async function startLab(labId) {
+        function startLab(labId) {
             const lab = labs.find(l => l.id === labId);
             processing.add(labId);
             updateUI(labId, 'processing');
 
-            Swal.fire({
+            let logs = [];
+            let progress = 0;
+
+            const modal = Swal.fire({
                 title: 'Deploying Environment',
-                html: `Building and starting <b>${lab.name}</b>...<br><span class="text-xs text-slate-500">Menyiapkan kontainer dan jaringan.</span>`,
+                html: `
+                    <p class="text-sm font-medium text-slate-500 mb-4">Building and starting <b>${lab.name}</b>...</p>
+                    <div class="progress-bar-container">
+                        <div id="progress-bar" class="progress-bar-fill"></div>
+                    </div>
+                    <div id="terminal" class="terminal-bg">
+                        <div class="terminal-line info">> Initializing deployment stream...</div>
+                    </div>
+                `,
+                width: '600px',
+                showConfirmButton: false,
                 allowOutsideClick: false,
+                background: '#fff',
+                customClass: { popup: 'rounded-[2.5rem] border-0 shadow-2xl overflow-hidden' },
                 didOpen: () => {
-                    Swal.showLoading();
+                    const terminal = document.getElementById('terminal');
+                    const progressBar = document.getElementById('progress-bar');
+                    
+                    const eventSource = new EventSource(`api.php?action=stream&container=${lab.container}`);
+
+                    eventSource.addEventListener('progress', (e) => {
+                        const data = JSON.parse(e.data);
+                        if (data.progress) {
+                            progress = data.progress;
+                            progressBar.style.width = `${progress}%`;
+                        }
+                        appendLog(data.msg, 'info');
+                    });
+
+                    eventSource.addEventListener('log', (e) => {
+                        const data = JSON.parse(e.data);
+                        appendLog(data.msg);
+                    });
+
+                    eventSource.addEventListener('result', (e) => {
+                        const data = JSON.parse(e.data);
+                        eventSource.close();
+                        processing.delete(labId);
+                        
+                        if (data.status === 'done') {
+                            appendLog(data.msg, 'success');
+                            progressBar.style.width = '100%';
+                            setTimeout(() => {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Lab Deployed!',
+                                    text: data.msg,
+                                    timer: 2000,
+                                    showConfirmButton: false,
+                                    customClass: { popup: 'rounded-3xl' }
+                                });
+                                checkStatus();
+                            }, 1000);
+                        } else {
+                            appendLog(data.msg, 'error');
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Deployment Failed',
+                                text: data.msg,
+                                customClass: { popup: 'rounded-3xl' }
+                            });
+                            checkStatus();
+                        }
+                    });
+
+                    eventSource.onerror = (e) => {
+                        eventSource.close();
+                        processing.delete(labId);
+                        appendLog('Connection to build server lost.', 'error');
+                        checkStatus();
+                    };
+
+                    function appendLog(msg, type = '') {
+                        const line = document.createElement('div');
+                        line.className = `terminal-line ${type}`;
+                        line.textContent = `> ${msg}`;
+                        terminal.appendChild(line);
+                        terminal.scrollTop = terminal.scrollHeight;
+                    }
                 }
             });
-
-            try {
-                const response = await fetch(`api.php?action=start&container=${lab.container}`);
-                const data = await response.json();
-
-                if (data.success) {
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Lab Deployed!',
-                        text: 'Security environment successfully initialized.',
-                        timer: 2000,
-                        showConfirmButton: false,
-                        background: '#fff',
-                        customClass: {
-                            popup: 'rounded-3xl border-0 shadow-2xl'
-                        }
-                    });
-                } else {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Deployment Failed',
-                        text: data.message || 'Build or run error occurred.',
-                        background: '#fff',
-                        customClass: {
-                            popup: 'rounded-3xl border-0 shadow-2xl'
-                        }
-                    });
-                }
-            } catch (error) {
-                Swal.fire('Error', 'Sistem gagal menghubungi API.', 'error');
-            } finally {
-                processing.delete(labId);
-                checkStatus();
-            }
         }
 
         async function stopLab(labId) {
@@ -400,39 +470,18 @@ $labs = [
 
             Swal.fire({
                 title: 'Terminating Lab',
-                html: `Stopping <b>${lab.name}</b>...<br><span class="text-xs text-slate-500">Membersihkan resource kontainer.</span>`,
+                html: `Stopping <b>${lab.name}</b>...`,
                 allowOutsideClick: false,
-                didOpen: () => {
-                    Swal.showLoading();
-                }
+                didOpen: () => { Swal.showLoading(); }
             });
 
             try {
                 const response = await fetch(`api.php?action=stop&container=${lab.container}`);
                 const data = await response.json();
-
                 if (data.success) {
-                    Swal.fire({
-                        icon: 'info',
-                        title: 'Lab Offline',
-                        text: 'Security simulation has been stopped.',
-                        timer: 1500,
-                        showConfirmButton: false,
-                        background: '#fff',
-                        customClass: {
-                            popup: 'rounded-3xl border-0 shadow-2xl'
-                        }
-                    });
+                    Swal.fire({ icon: 'info', title: 'Lab Offline', timer: 1500, showConfirmButton: false, customClass: { popup: 'rounded-3xl' } });
                 } else {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Termination Failed',
-                        text: 'Gagal menghentikan lab.',
-                        background: '#fff',
-                        customClass: {
-                            popup: 'rounded-3xl border-0 shadow-2xl'
-                        }
-                    });
+                    Swal.fire({ icon: 'error', title: 'Error', text: 'Gagal menghentikan lab.', customClass: { popup: 'rounded-3xl' } });
                 }
             } catch (error) {
                 Swal.fire('Error', 'Koneksi API bermasalah.', 'error');
@@ -445,9 +494,6 @@ $labs = [
         checkStatus();
         setInterval(checkStatus, 5000);
     </script>
-</body>
-
-</html>
 </body>
 
 </html>
