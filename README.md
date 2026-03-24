@@ -8,18 +8,19 @@ Gunakan panduan di bawah ini sesuai dengan Sistem Operasi (OS) yang Anda gunakan
 
 ### 🐧 Linux (Ubuntu/Debian/Arch)
 
-Jika Anda mengalami error `permission denied` saat menjalankan Docker, ikuti langkah ini:
+**Langkah WAJIB** agar lab berjalan lancar di berbagai sistem Linux:
 
-1. **Jalankan Script Automasi**:
+1. **Jalankan Script Setup Universal**:
+   Script ini akan memperbaiki izin akses Docker secara otomatis tanpa perlu mengubah kode.
    ```bash
    chmod +x init-setup.sh
    ./init-setup.sh
    ```
-2. **Login Ulang**: Anda **WAJIB** melakukan logout dan login kembali ke komputer Anda agar perubahan izin (group docker) berlaku.
-3. **Mulai Proyek**:
+2. **Mulai Proyek**:
    ```bash
-   sudo docker-compose up -d --build
+   docker-compose up -d --build
    ```
+3. **Catatan**: Jika Anda ingin menjalankan perintah `docker` tanpa `sudo` di terminal biasa, Anda tetap perlu logout dan login kembali setelah menjalankan script di atas. Namun, Dashboard akan langsung berfungsi setelah langkah 1 & 2.
 
 ### 🪟 Windows
 

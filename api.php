@@ -172,6 +172,13 @@ switch ($action) {
             flush();
         }
 
+        // Detect Host Project Path for Volume Mounting (DooD)
+        $hostPath = "";
+        $inspectResult = execDocker("docker inspect labsec-dashboard --format '{{ range .Mounts }}{{ if eq .Destination \"/var/www/html\" }}{{ .Source }}{{ end }}{{ end }}'");
+        if ($inspectResult['code'] === 0) {
+            $hostPath = trim($inspectResult['output']);
+        }
+
         $config = $labConfig[$container];
         
         // 1. Check if container exists
@@ -244,8 +251,16 @@ switch ($action) {
                 }
             }
             
+            $volumeFlag = "";
+            if (!empty($hostPath)) {
+                // Ensure we mount the correct subdirectory
+                $subDir = basename($config['path']);
+                $volumeFlag = "-v " . escapeshellarg("{$hostPath}/{$subDir}:/var/www/html") . " ";
+            }
+            
             $runCmd = "docker run -d --name $container " .
                 $envFlags .
+                $volumeFlag .
                 "-p {$config['port']} " .
                 "--network {$config['network']} " .
                 "--restart unless-stopped " .
