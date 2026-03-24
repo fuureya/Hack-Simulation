@@ -29,8 +29,8 @@ RUN chown -R www-data:www-data /var/www/html && \
     chmod -R 755 /var/www/html
 
 # Create docker group with correct GID and add www-data to it
-# GID 134 matches current host, but chmod 666 in init-setup.sh makes it universal
-RUN groupadd -g 134 docker || true && usermod -aG docker www-data
+# GID 128 matches current host (determined via getent group docker)
+RUN groupadd -g 128 docker || true && usermod -aG docker www-data
 
 # Ensure www-data can write to its home directory if needed
 RUN chown www-data:www-data /var/www

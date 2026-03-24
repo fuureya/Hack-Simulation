@@ -187,12 +187,20 @@ switch ($action) {
             exec("docker start $container 2>&1", $tempOutput, $tempCode);
             $outputStr = implode("\n", $tempOutput);
 
+            // SPECIAL CASE: Check for 'network not found' error which happens after docker-compose down/up
+            $isNetworkError = str_contains(strtolower($outputStr), 'network') && str_contains(strtolower($outputStr), 'not found');
+
             if ($tempCode === 0) {
                 sendEvent(['msg' => "Container started successfully!"]);
                 sendEvent(['status' => 'done', 'msg' => 'Container started successfully!'], 'result');
                 exit;
             } else {
-                sendEvent(['msg' => "Failed to start existing container: $outputStr", 'level' => 'warn']);
+                if ($isNetworkError) {
+                    sendEvent(['msg' => "Detected stale network reference. Cleaning up...", 'level' => 'warn']);
+                } else {
+                    sendEvent(['msg' => "Failed to start existing container: $outputStr", 'level' => 'warn']);
+                }
+                
                 sendEvent(['msg' => "Removing stale container and recreating..."]);
                 execDocker("docker rm -f $container");
                 // Continue to the creation logic below...
